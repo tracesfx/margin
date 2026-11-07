@@ -3,7 +3,7 @@
 Margin is a Windows desktop app for writing books, with a quiet local AI assistant. **`SPEC.md` is the source of truth.** Read the sections relevant to your task before writing code. If the implementation must deviate from the spec, update `SPEC.md` (decisions log §1.2, or the relevant section) in the same change, and tell the user.
 
 ## Status
-- Phase: **M5 built** (2026-11-06): the Insights workspace (six views, one module each) and the `tension` extractor, on top of M4's Story Memory and Margin panel. M6 (formatting and export) next. See `docs/progress.md`.
+- Phase: **M6 built** (2026-11-07): the Export workspace (profiles, templates, Markdown/TXT, Word manuscript and styled Word, Typst PDF with a page preview), on top of M5's Insights and M4's Story Memory. M7 (polish) next. See `docs/progress.md`.
 - Track milestone progress in `docs/progress.md`, a checklist per milestone. Create it on first run.
 - After scaffolding, replace the "Commands" section below with the real, verified commands.
 
@@ -38,7 +38,7 @@ src-tauri/                 Rust backend
     memory/                indexer, extraction schemas, retrieval, embeddings
     stats/                 sessions, provenance, time series
     spell/                 spellcheck
-    export/                exporter trait + markdown/docx/typst impls
+    export/                book model, profiles, markdown/docx/typeset (Typst) exporters, preview
 src/                       Frontend
   app/                     shell: layout, palette, keymap, status bar, settings
   editor/                  TipTap extensions (semantic styles, ghost text, para IDs, provenance)

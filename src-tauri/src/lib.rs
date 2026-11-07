@@ -5,11 +5,13 @@ pub mod app_state;
 pub mod backup;
 pub mod commands;
 pub mod commands_ai;
+pub mod commands_export;
 pub mod commands_ext;
 pub mod commands_memory;
 pub mod dialect;
 pub mod error;
 pub mod events;
+pub mod export;
 pub mod history;
 pub mod memory;
 pub mod project;
@@ -40,6 +42,7 @@ use crate::watcher::ProjectWatcher;
 pub fn specta_builder() -> Builder<tauri::Wry> {
     use commands as c;
     use commands_ai as a;
+    use commands_export as e;
     use commands_ext as x;
     use commands_memory as m;
     Builder::<tauri::Wry>::new()
@@ -169,6 +172,14 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             m::memory_export,
             m::insight_export,
             m::memory_import,
+            e::export_profiles,
+            e::export_profile_save,
+            e::export_profile_delete,
+            e::export_templates,
+            e::export_fonts,
+            e::export_run,
+            e::export_preview,
+            e::export_preview_pages,
         ])
         .events(collect_events![MarginEvent])
         // Every type has the same shape in both directions.
@@ -235,6 +246,7 @@ pub fn run() {
                 tauri::async_runtime::handle().inner().clone(),
             );
             app.manage(memory);
+            app.manage(export::ExportService::new(story.clone(), bus.clone()));
             app.manage(ai.clone());
             app.manage(bakeoff);
             // Forward every domain event to the frontend.

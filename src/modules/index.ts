@@ -8,7 +8,7 @@
  */
 import type { ModuleManifest } from "@margin/sdk";
 
-const FIRST = ["editor", "binder", "search", "inspector", "comments", "notes", "history", "stats", "ai", "bible", "margin", "insights"];
+const FIRST = ["editor", "binder", "search", "inspector", "comments", "notes", "history", "stats", "ai", "bible", "margin", "insights", "export"];
 
 const found = import.meta.glob<{ default: ModuleManifest }>("./*/module.ts", { eager: true });
 

@@ -328,3 +328,47 @@ Throwaway project: the first 10 chapters of the 50k fixture (15,538 words), read
 ### Tests (M5)
 - Rust: 199 pass (6 new: tension schema/prompt/parse, tension end to end and re-read, story order, inspector/CSV, export file names); clippy and fmt clean.
 - Vitest: 155 pass (54 new: a model test file per view, module discovery, Hello view, CSV/file names); typecheck and ESLint clean. `npm audit --omit=dev`: 0.
+
+## M6 — Formatting and export (2026-11-07)
+
+### Decisions (recorded in SPEC §1.2)
+- One export model for every format: the Story Data Service reads the binder (`book_source`), `export::book` flattens it into pieces (part, chapter, scene break, blocks, matter). Numbering, scene breaks, excluded documents and comment stripping are decided once.
+- Exporters are Rust: `markdown` (Markdown and TXT), `docx` (`docx-rs`: Standard Manuscript Format and styled), `typeset` + `world` (Typst 0.15: PDF and the SVG preview). Output is written atomically; the project is never touched except `exports/profiles.yaml`.
+- Profiles carry their template's settings by value (`exports/profiles.yaml`, schemaVersion 1). Four built-in templates: Classic, Modern, Literary, Non-fiction. Saved custom templates in `templates/` are deferred.
+- Manuscript text reaches Typst only through an escaper (every ASCII punctuation mark but the straight quotes is backslash-escaped), so no sentence can be read as Typst markup.
+- Deferred, and recorded in the spec: bundled OFL book fonts (only Typst's Libertinus Serif, New Computer Modern and DejaVu Sans Mono are bundled; installed fonts work), the in-editor Page view and click-to-source (moved to M7), sunken drop caps (built as a large first letter), DOCX comments, Word list numbering.
+
+### Build checklist
+- [x] Book model and profiles (`export::book`, `export::profile`), `exports/profiles.yaml`
+- [x] Markdown and plain text (one file or one per chapter; italics style; scene-break mark; footnotes)
+- [x] Word, Standard Manuscript Format (contact block, rounded word count, "Surname / TITLE / page" header from page 2, chapters on new pages, `#` breaks)
+- [x] Word, styled (named styles for every semantic block, real footnotes, contents field)
+- [x] PDF through Typst: templates, trim sizes, mirrored margins, running heads, folios, roman front matter, bookmarks, contents, title / copyright / dedication / epigraph pages, small-caps lead-in or large first letter, recto starts with truly blank left-hand pages
+- [x] Export workspace (`export` module, Ctrl+Alt+E): profile list, form, page preview (spreads, fetched a few pages at a time), background run with `export.finished`
+- [x] SDK 0.7.0 (`exporter`, `pickExportDir`, `openExport`), docs: SPEC §1.2 and §16, `docs/data-format.md`, `docs/sdk.md`
+
+### Acceptance (M6): run in the real app over CDP, 2026-11-07
+A throwaway project: the first 8 chapters of the 50k fixture (11,605 words, 16 scenes, front and back matter).
+- [x] Ctrl+Alt+E opens Export; the five built-in profiles are listed; nothing is written to the project until a profile changes.
+- [x] PDF preview typesets (46 pages at 6 × 9 in, Modern; 5.5 × 8.5 in Classic) and pages through as spreads (page 1 alone, then 2–3, 4–5…).
+- [x] Every profile exported to a folder: Word manuscript, styled Word, Markdown, text and PDF (`%PDF-` header, 46 pages). 12 of 12 scripted checks passed.
+- [x] Chapters open on right-hand pages (checked with Typst's introspector); the filler left-hand pages have no running head and no folio (checked: no glyphs on them).
+- [x] Exporting never changes the manuscript (test: byte-for-byte snapshot of the project before and after all five profiles).
+- [x] The copyright page, small-caps lead-in and running heads look right in the preview (screenshots).
+
+### Findings
+- **Typst's `pagebreak(to: "odd")` keeps the running head on the blank page it adds.** Replaced with a weak page break plus an explicit header-less blank page when the next page would be left-hand.
+- **A system font may have no small-capital glyphs** (Garamond has none): the lead-in stayed lowercase. Bundled fonts use real small capitals; any other font gets capitals one size down.
+- **Typst 0.15's API is new**: `FileId` comes from a `RootedPath`, `PagedDocument` lives in `typst-layout`, headings carry a "Section" supplement in `plain_text()`.
+- **specta renders `f32` and `f64` as `number | null`**; the form reads them with a fallback. `ExportFormat` was already taken by the memory export, so the book formats are `BookFormat`.
+- The "]" paragraphs in the PDF preview are in the fixture (Gutenberg's `[Illustration]` markers), not an export fault.
+- The first Typst build adds a few minutes to a cold `cargo` build; an incremental rebuild of the app is about a minute.
+
+### Tests (M6)
+- Rust: 219 pass (19 new in `export::`: book assembly and numbering, Markdown and TXT, both Word modes (styles, header, footnotes, contact block), PDF pages and recto starts, blank pages, preview paging and cache keys, escaping, small-caps fallback, profiles, every template, "never changes the manuscript"); clippy and fmt clean.
+- Vitest: 163 pass (8 new: model helpers and spreads); typecheck and ESLint clean. `npm audit --omit=dev`: 0.
+
+### Known limits
+- Not typeset-checked against a printer's spec; platform gutter tables and preflight are deferred (§12.2).
+- The PDF's fonts are embedded by Typst; for a system font the result warns about its embedding licence.
+- The Word contents list is a field: Word asks to update it on first open.

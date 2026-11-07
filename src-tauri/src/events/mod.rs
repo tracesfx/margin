@@ -96,6 +96,14 @@ pub enum DomainEvent {
         total: u32,
         current: Option<String>,
     },
+    /// An export finished (SPEC §5.2, §12.5). `files` are the paths written.
+    #[serde(rename = "export.finished", rename_all = "camelCase")]
+    ExportFinished {
+        profile_id: String,
+        ok: bool,
+        files: Vec<String>,
+        error: Option<String>,
+    },
     #[serde(rename = "backup.finished", rename_all = "camelCase")]
     BackupFinished {
         path: Option<String>,

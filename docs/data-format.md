@@ -262,6 +262,14 @@ Memory Inspector → Export writes into a folder the author picks: `story-memory
 
 Insights views export their own data from the view: `<view>.csv` (RFC 4180, CRLF; cells that would run as a formula in a spreadsheet get a leading apostrophe), plus `<view>.png` and `<view>.svg` for the chart. The file name is a plain name with one of those three extensions, saved in a folder the author picks; an existing file gets a number instead of being overwritten.
 
+### `exports/profiles.yaml` (schemaVersion 1)
+
+Export profiles (SPEC §12.5). The file does not exist until the author changes a profile; until then Margin offers five built-in ones. `profiles` is a list; each profile has `id`, `name`, `format` (`markdown`, `text`, `docxManuscript`, `docxStyled`, `pdf`), `includeFrontMatter`, `includeBackMatter`, `titlePage`, `toc`, `copyright`, `dedication`, `epigraph`, `epigraphBy`, `numbering` (`none`, `numeric`, `words`), `chapterLabel`, `sceneSeparator`, `template` (the built-in template it started from: `classic`, `modern`, `literary`, `nonfiction`), `settings`, `splitChapters`, `italics` (`underscores`, `asterisks`, `plain`), `manuscriptFont`, `contact` (`name`, `address`, `email`, `phone`), `outputDir` and `fileName`.
+
+`settings` are the template's values, kept by value: `font`, `sizePt`, `leadingEm`, `indentEm`, `paragraphSpaceEm`, `justify`, `hyphenate`, `chapterOpening` (`plain`, `smallCapsLead`, `largeInitial`), `ornament`, `runningHeads`, `pageNumbers`, `rectoStarts`, `widowOrphan`, `trimWidthIn`, `trimHeightIn`.
+
+What a format writes: Markdown is one `<title>.md` (YAML title/author block, `#` parts, `##` chapters, the dialect's own styles kept), or a folder of `NN - <chapter>.md` files; plain text is the same without markup; Word and PDF are one `.docx` / `.pdf`. Documents switched off in the binder, trash, notes, research and comment marks are never exported. A file of the same name is replaced, atomically.
+
 ## Writes
 
 Every file is written atomically: write a temp file `.<name>.<ulid>.margin-tmp` in the same folder, fsync it, then rename it over the target. A crash leaves either the old or the new file. Leftover temp files are deleted when the project opens.

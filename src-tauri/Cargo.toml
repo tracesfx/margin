@@ -17,6 +17,7 @@ path = "src/main.rs"
 tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
+docx-rs = "0.4.22"
 chrono = { version = "0.4.45", default-features = false, features = ["clock", "serde", "std"] }
 futures-util = { version = "0.3.34", default-features = false, features = ["std"] }
 git2 = { version = "0.21.0", default-features = false }
@@ -38,6 +39,11 @@ thiserror = "2.0.21"
 tokio = { version = "1.54.1", features = ["rt-multi-thread", "macros", "sync", "time", "process", "io-util"] }
 tokio-util = { version = "0.7.20", default-features = false }
 ulid = "3.0.0"
+typst = "0.15.1"
+typst-kit = { version = "0.15.1", default-features = false, features = ["embedded-fonts", "scan-fonts"] }
+typst-layout = "0.15.1"
+typst-pdf = "0.15.1"
+typst-svg = "0.15.1"
 url = "2.5.8"
 zip = { version = "9.3.0", default-features = false, features = ["deflate"] }
 

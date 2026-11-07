@@ -1,5 +1,6 @@
 //! Story Data Service (SPEC §5.1).
 
+pub mod book;
 mod ops;
 mod search;
 mod service;

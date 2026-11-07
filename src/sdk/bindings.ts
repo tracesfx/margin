@@ -155,6 +155,14 @@ export const commands = {
 	memoryExport: (dir: string, format: ExportFormat) => typedError<string[], MarginError>(__TAURI_INVOKE("memory_export", { dir, format })),
 	insightExport: (dir: string, name: string, data: number[]) => typedError<string, MarginError>(__TAURI_INVOKE("insight_export", { dir, name, data })),
 	memoryImport: (path: string) => typedError<number, MarginError>(__TAURI_INVOKE("memory_import", { path })),
+	exportProfiles: () => typedError<ExportProfile[], MarginError>(__TAURI_INVOKE("export_profiles")),
+	exportProfileSave: (profile: ExportProfile) => typedError<ExportProfile[], MarginError>(__TAURI_INVOKE("export_profile_save", { profile })),
+	exportProfileDelete: (id: string) => typedError<ExportProfile[], MarginError>(__TAURI_INVOKE("export_profile_delete", { id })),
+	exportTemplates: () => typedError<TemplateInfo[], MarginError>(__TAURI_INVOKE("export_templates")),
+	exportFonts: () => typedError<string[], MarginError>(__TAURI_INVOKE("export_fonts")),
+	exportRun: (profile: ExportProfile, dir: string | null) => typedError<ExportResult, MarginError>(__TAURI_INVOKE("export_run", { profile, dir })),
+	exportPreview: (profile: ExportProfile) => typedError<PreviewInfo, MarginError>(__TAURI_INVOKE("export_preview", { profile })),
+	exportPreviewPages: (key: string, start: number, count: number) => typedError<PreviewPage[], MarginError>(__TAURI_INVOKE("export_preview_pages", { key, start, count })),
 };
 
 /** Events */
@@ -319,6 +327,12 @@ export type BlindQuestion = {
 	answer: string | null,
 };
 
+export type BookFormat = "markdown" | "text" | 
+/**  Standard Manuscript Format, for submissions. */
+"docxManuscript" | 
+/**  Semantic styles become named Word styles. */
+"docxStyled" | "pdf";
+
 export type Candidate = {
 	presetId: string,
 	name: string,
@@ -348,6 +362,10 @@ export type Capabilities = {
 	/**  The server's own rendering of a sample chat differs from ours. */
 	templateWarning: string | null,
 };
+
+export type ChapterOpening = "plain" | "smallCapsLead" | 
+/**  An enlarged first letter (a raised initial; sunken drop caps are not built). */
+"largeInitial";
 
 export type Citation = {
 	/**  The number the answer uses: [1], [2], … */
@@ -380,6 +398,13 @@ export type Completion = {
 };
 
 export type ConnectionMode = "managed" | "external";
+
+export type Contact = {
+	name?: string,
+	address?: string,
+	email?: string,
+	phone?: string,
+};
 
 export type ContextLogEntry = {
 	schemaVersion: number,
@@ -529,7 +554,9 @@ export type DomainEvent = { type: "project.opened"; projectId: string; title: st
  */
 { type: "memory.updated"; entityIds: string[]; sceneIds: string[]; kinds: string[] } | 
 /**  The indexer's state changed (SPEC §9.4 step 5). */
-{ type: "index.progress"; state: IndexState; pending: number; total: number; current: string | null } | { type: "backup.finished"; path: string | null; error: string | null };
+{ type: "index.progress"; state: IndexState; pending: number; total: number; current: string | null } | 
+/**  An export finished (SPEC §5.2, §12.5). `files` are the paths written. */
+{ type: "export.finished"; profileId: string; ok: boolean; files: string[]; error: string | null } | { type: "backup.finished"; path: string | null; error: string | null };
 
 export type EmbeddingStatus = {
 	enabled: boolean,
@@ -608,6 +635,47 @@ export type ExpandedIdea = {
 };
 
 export type ExportFormat = "json" | "csv" | "markdown" | "graphml";
+
+export type ExportProfile = {
+	id: string,
+	name: string,
+	format: BookFormat,
+	includeFrontMatter: boolean,
+	includeBackMatter: boolean,
+	titlePage: boolean,
+	toc: boolean,
+	/**  Copyright page text. Empty = no copyright page. */
+	copyright: string,
+	dedication: string,
+	epigraph: string,
+	epigraphBy: string,
+	numbering: Numbering,
+	chapterLabel: string,
+	/**  Printed between scenes (the manuscript's `***`). SMF uses `#`. */
+	sceneSeparator: string,
+	/**  Built-in template id (`classic`, `modern`, `literary`, `nonfiction`). */
+	template: string,
+	settings: TemplateSettings,
+	/**  Markdown/TXT: one file per chapter. */
+	splitChapters: boolean,
+	italics: ItalicStyle,
+	/**  Standard Manuscript Format: `Times New Roman` or `Courier New`. */
+	manuscriptFont: string,
+	contact: Contact,
+	/**  Folder the file goes to. `None` = ask each time. */
+	outputDir: string | null,
+	/**  File name without the extension. `None` = the book's title. */
+	fileName: string | null,
+};
+
+export type ExportResult = {
+	profileId: string,
+	files: string[],
+	words: number,
+	/**  Pages, for PDF. */
+	pages: number | null,
+	warnings: string[],
+};
 
 export type Fact = {
 	id: string,
@@ -742,6 +810,8 @@ export type InspectorRow = {
 	item: ItemRef | null,
 };
 
+export type ItalicStyle = "underscores" | "asterisks" | "plain";
+
 export type ItemKind = "entity" | "fact" | "relation" | "event";
 
 /**  A record in the Memory Inspector, addressed for bulk actions. */
@@ -865,6 +935,14 @@ export type NewProject = {
 	locale: Locale,
 };
 
+export type Numbering = 
+/**  Chapter titles only. */
+"none" | 
+/**  "Chapter 3" */
+"numeric" | 
+/**  "Chapter Three" */
+"words";
+
 export type Outcome = "completed" | "cancelled" | "failed";
 
 export type PassageHit = {
@@ -938,6 +1016,20 @@ export type Preset = {
 	sampling?: RoleSampling[],
 	/**  Built-in presets can be edited but not deleted. */
 	builtin?: boolean,
+};
+
+export type PreviewInfo = {
+	/**  Identifies this typesetting; pass it back to fetch pages. */
+	key: string,
+	pageCount: number,
+	widthPt: number | null,
+	heightPt: number | null,
+	warnings: string[],
+};
+
+export type PreviewPage = {
+	index: number,
+	svg: string,
 };
 
 /**  Scheduler priority (SPEC §6.4). Lower number = more urgent. */
@@ -1318,6 +1410,35 @@ export type StoryTime = {
 
 /**  How the instruct template wraps a request when we send a raw prompt. */
 export type Template = "chatMl" | "gemma" | "mistral";
+
+export type TemplateInfo = {
+	id: string,
+	name: string,
+	settings: TemplateSettings,
+};
+
+/**  Everything a template decides (SPEC §12.2). The manuscript stays clean. */
+export type TemplateSettings = {
+	font: string,
+	sizePt: number | null,
+	/**  Extra space between lines, in em (Typst "leading"). */
+	leadingEm: number | null,
+	/**  First-line indent, in em. 0 = block paragraphs. */
+	indentEm: number | null,
+	/**  Space between paragraphs, in em (used with no indent). */
+	paragraphSpaceEm: number | null,
+	justify: boolean,
+	hyphenate: boolean,
+	chapterOpening: ChapterOpening,
+	ornament: string,
+	runningHeads: boolean,
+	pageNumbers: boolean,
+	/**  Chapters and parts start on a right-hand page. */
+	rectoStarts: boolean,
+	widowOrphan: boolean,
+	trimWidthIn: number | null,
+	trimHeightIn: number | null,
+};
 
 /**
  *  A half-open range of UTF-16 code units in the plain text of a document

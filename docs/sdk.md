@@ -39,7 +39,8 @@ It is found automatically: `src/modules/index.ts` loads every `src/modules/*/mod
 | `marginTabs` | live | `{ id, title, order?, component(props: { active }) }`; a tab in the Margin panel |
 | `insightsViews` | live | `{ id, title, description?, order?, component(props: { active }) }`; a view in the Insights workspace (see Insights below) |
 | `memoryExtractors` | live | `{ id, metricKey, title, max, settingKey? }`; declares a per-scene metric the model reports (see Insights below). The extractor itself is Rust |
-| `inspectorSections`, `aiTasks`, `exporters`, `bibleTypes` | placeholder | Shapes are finalised by the milestone that adds their first consumer |
+| `exporters` | listed | The Export module declares its five formats; the work is Rust (`src-tauri/src/export/`) |
+| `inspectorSections`, `aiTasks`, `bibleTypes` | placeholder | Shapes are finalised by the milestone that adds their first consumer |
 
 Every contribution is rendered inside an error boundary, so a failing module never takes down the editor. A module turned off in Settings → Modules loses its panels, views, commands and status items, and its `activate()` cleanup runs.
 
@@ -212,10 +213,25 @@ A view reads only through the SDK, draws only while `active`, and links every it
 
 **`memoryExtractors`.** An extractor adds a metric to every scene the model reads (the first is `tension`, 0–10). The extractor is Rust, registered in `memory::extract::EXTRACTORS` (id, metric key, schema key, range, one line of instruction); its value appears in `memory.metrics.series(key)` and the scene card. The module's `memoryExtractors` entry only declares the metric, so views can offer it (the Structure overview's "Line" menu). `settingKey` names the `MemoryConfig` flag that switches it on (`extractTension`).
 
+## Export — `exporter`, `pickExportDir`
+
+The Export workspace (`EXPORT_VIEW`, the `export` module) edits profiles and runs them; `openExport()` opens it. The client wraps the IPC commands:
+
+```ts
+exporter.profiles() / saveProfile(p) / deleteProfile(id)   // exports/profiles.yaml; the defaults show until the first save
+exporter.templates() / fonts()                              // the four built-in templates; installed and bundled font families
+exporter.run(profile, dir|null)                             // { files, words, pages?, warnings }; dir null uses profile.outputDir
+exporter.preview(profile) / previewPages(key, start, count) // typeset (PDF profiles) then fetch SVG pages a few at a time
+pickExportDir()                                             // the native folder picker (window.__marginExportDir answers for a test driver)
+events.on("export.finished", e => …)                        // { profileId, ok, files, error }
+```
+
+Export reads the book through `StoryService::book_source()` and never changes it.
+
 ## Lifecycle — `lifecycle`
 
 `lifecycle.onBeforeClose(async () => …)` registers work that must finish before the window closes or the project switches, such as flushing unsaved text.
 
 ## Breaking changes
 
-None yet. 0.6.0 only added the Insights extension point and client (`insightsViews`, `memoryExtractors`, `useInsightsData`, `Chart`, `ExportBar`, the export helpers, `chapterGroups`), `memory.timeline.setOrder`, and the discovery of module folders by `import.meta.glob`. 0.5.0 only added the Story Memory client (`memory`, `openSource`, the memory hooks and events), the concrete `marginTabs` extension point, and `textBeforeCursor` / `selectionContext` on editor handles. 0.4.0 only added the ghost-text and provenance APIs above (`ai.ghost`, `ai.status`, `ai.isReady`, `story.provenance`, `aiSession`, the `ai.ghost` and `ai.provenanceChanged` events, and the ghost-text and Flow-mode settings). 0.3.0 only added the `ai` client and the `ai.*` events. 0.2.0 only added APIs (settings, uiState, editorHost, prompt, right sidebar, `activate()`, notice keys, and the Story calls above).
+None yet. 0.7.0 only added the Export client (`exporter`, `pickExportDir`, `openExport`, `EXPORT_VIEW`), the `export.finished` event and the `export` module's formats under `exporters`. 0.6.0 only added the Insights extension point and client (`insightsViews`, `memoryExtractors`, `useInsightsData`, `Chart`, `ExportBar`, the export helpers, `chapterGroups`), `memory.timeline.setOrder`, and the discovery of module folders by `import.meta.glob`. 0.5.0 only added the Story Memory client (`memory`, `openSource`, the memory hooks and events), the concrete `marginTabs` extension point, and `textBeforeCursor` / `selectionContext` on editor handles. 0.4.0 only added the ghost-text and provenance APIs above (`ai.ghost`, `ai.status`, `ai.isReady`, `story.provenance`, `aiSession`, the `ai.ghost` and `ai.provenanceChanged` events, and the ghost-text and Flow-mode settings). 0.3.0 only added the `ai` client and the `ai.*` events. 0.2.0 only added APIs (settings, uiState, editorHost, prompt, right sidebar, `activate()`, notice keys, and the Story calls above).

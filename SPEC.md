@@ -65,6 +65,13 @@ Everything runs on the author's machine. Nothing leaves `localhost`.
 | `tension` extractor (M5) | The first `memoryExtractors` entry. The reading of a scene also reports `g_metrics.a_tension`, an integer 0-10, in the same grammar-constrained call (no second call), stored as the scene card's `metrics.tension`. Scenes are averaged per chapter weighted by words. It is on by default (Settings → Memory); a card made before it was on, or while it was off, is read again once it is switched on (the card records the extractors it asked for in `extractors`, so a scene the model could not rate is not re-read for ever). An extractor is Rust (`memory::extract::EXTRACTORS`); the module declares the metric so the views offer it |
 | Story order of events (M5) | The model reports an event's story time only as a label ("that night"), so a Timeline with real story order needs the author: the Timeline view moves an event earlier or later in story time. That sets `storyTime.order` (a number on the scale of narrative position, 1 = the first event told) and, as an author action, makes the event canon, so a later reading of its scene leaves it alone. Events without a number sit where the book tells them (hollow dots) |
 | Relationship graph "as of chapter N" (M5) | A relation is shown when the passage it was read from is in a chapter at or before N; a relation with no recorded passage is always shown |
+| Export pipeline (M6) | One export model feeds every format. `Story Data Service::book_source()` reads the binder (front matter, manuscript, back matter, documents switched off left out with what is inside them); `export::book` flattens it into pieces (part, chapter, scene break, blocks, matter) so numbering and scene breaks agree everywhere; comment marks are stripped. Exporters are Rust modules in `src-tauri/src/export/` (`markdown`, `docx`, `typeset` + `world`), run on a blocking worker, write atomically, and emit `export.finished`. They never write to the project except `exports/profiles.yaml`. A finished export replaces a file of the same name (it is a generated copy; Insights files, by contrast, are never overwritten) |
+| Profiles and templates (M6) | A profile (`exports/profiles.yaml`, schemaVersion 1) carries its template's settings by value plus the id it started from, so a profile is self-contained and "Reset" restores the template. The four built-in templates (Classic, Modern, Literary, Non-fiction) live in Rust. Saving *custom* templates into `templates/` (§13) is deferred: a profile is the saved template. Profiles are shown from built-in defaults until the author changes one; nothing is written before that |
+| Typesetting (M6) | PDF and the preview use the Typst crates (`typst` 0.15, `typst-pdf`, `typst-svg`) with a small `World`: one generated source, no packages, no file access. Manuscript text reaches Typst only through an escaper that backslash-escapes every ASCII punctuation mark except straight quotes (which Typst curls), so no manuscript can be read as markup. Chapter headings are hidden Typst headings (they feed the PDF bookmarks, the contents list and the running-head logic) plus drawn openings. Blank left-hand pages before a recto start carry no running head or folio |
+| Fonts (M6) | Typst's embedded Libertinus Serif, New Computer Modern and DejaVu Sans Mono are bundled; installed system fonts are found at export time. A template names one font with fallbacks, and the result warns when the font is a system font (embedding licence) or is not installed. **The §12.2 OFL fonts (EB Garamond, Crimson Pro, Libre Baskerville, Source Serif 4, Literata) are not bundled yet**: they need font files added to the app; the font box accepts them once installed |
+| Chapter openings (M6) | "Drop cap" is built as a **large first letter** (a raised initial), because Typst without a package cannot flow text around a sunken capital. Small-caps lead-in is built as specified |
+| DOCX (M6) | Built with `docx-rs`. Both modes use named paragraph styles (Body Text, First Paragraph, Chapter Title, Scene Break, Block Quote, Epigraph, Letter, Text Message, Verse, Centered, Heading 2-4, …). Small capitals are drawn as capitals one size smaller because `docx-rs` has no small-caps property; footnotes are real Word footnotes; the contents list is a Word field that updates when the file opens. Lists use a typed marker with a hanging indent, not Word numbering. Standard Manuscript Format: contact block, rounded word count, header "Surname / TITLE / page" from page 2, title block, chapters on new pages a third down, centred `#` breaks, "THE END". Comments as DOCX comments (optional in §11) are not built |
+| Page view (M6) | The export **preview** shows the Typst pages (SVG, one page or a spread, fetched a few at a time) beside the settings. The in-editor Page view and click-to-source (§12.2) are not built; they need a source map from pages back to paragraphs and move to M7 |
 
 ---
 
@@ -776,11 +783,13 @@ Build order puts quality of life and the framework first. Each milestone ends wi
 - `memoryExtractors` example (`tension` metric) feeding the Structure view
 - ✅ A new view can be added by creating one module folder only. Proven by a sample "Hello view" module in `docs/`. Acceptance results in `docs/progress.md`.
 
-**M6 — Formatting and export**
-- Templates, front/back matter, Typst page view and preview
+**M6 — Formatting and export** ✅ (2026-11-07)
+- Templates, front/back matter, Typst preview (the in-editor Page view and click-to-source move to M7; see §1.2)
 - Markdown/TXT, SMF and styled DOCX, PDF, export profiles
+- ✅ Acceptance results in `docs/progress.md`
 
 **M7 — Polish**
+- The in-editor Page view with click-to-source, bundled OFL book fonts, saved custom templates (moved from M6)
 - Writing sprints, read-aloud, onboarding, accessibility pass
 - Performance pass against §14
 - Installer (MSI/NSIS), optional update check (no data sent)
