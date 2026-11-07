@@ -26,11 +26,11 @@ Margin is a Windows desktop app for writing a novel or a non-fiction book. You w
 
 ### Install
 
-1. Get the installer (`Margin_0.1.0_x64-setup.exe`, or the `.msi`). Margin is not code-signed yet, so Windows SmartScreen may warn the first time: choose **More info → Run anyway**.
+1. Download `Margin_0.1.0_x64-setup.exe` (or the `.msi`) from the [latest release](https://github.com/tracesfx/margin/releases/latest). `SHA256SUMS.txt` is there too. Margin is not code-signed yet, so Windows SmartScreen may warn the first time: choose **More info → Run anyway**.
 2. Run it. The `.exe` installs for your user only and needs no administrator rights.
 3. Start Margin, choose **New project**, and pick where its folder should live.
 
-Installers are not published anywhere yet; build one yourself with the steps under [For developers](#for-developers).
+To build an installer yourself, see [For developers](#for-developers).
 
 ### First steps
 
@@ -82,7 +82,7 @@ My Novel/
 
 ### Known limits
 
-Windows 10/11 only. English only. Not code-signed. No installer has been published, and there is no in-app updater. Sunken drop caps, Word list numbering and Word comments in exports are not built. The full list of decisions and gaps is in [`docs/progress.md`](docs/progress.md).
+Windows 10/11 only. English only. Not code-signed, and there is no in-app updater (the optional update check only tells you). Sunken drop caps, Word list numbering and Word comments in exports are not built. The full list of decisions and gaps is in [`docs/progress.md`](docs/progress.md).
 
 ---
 

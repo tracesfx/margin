@@ -431,3 +431,9 @@ The author allowed one exception to non-negotiable 3 (no network). Recorded in S
 - [x] `updates` module (SDK 0.9.0): Settings → Updates (off by default; once-a-day switch; Check now), palette command, one notice per new version with "Open download page". The startup check waits for settings and 20 s, and does nothing at all when off.
 - Rust tests (7): version comparison, link confinement and shell-metacharacter refusal, newer/same release, 404 / draft / prerelease are not updates, off-project link / junk / oversized / 500 / nothing listening refused, redirects refused; all against a local mock server. Opt-in live test `live_update_check_reaches_github` passed against the real GitHub (the repository has no release yet, so "no release published"). Vitest: due-for-check and once-per-version logic, default off.
 - Finding: the repository is now `tracesfx/margin`; `tracesfx/Writing-assistant` answers 301, and the check refuses redirects, so the constants use the new name.
+
+### Release 0.1.0 (2026-11-07)
+- Tag `v0.1.0` at `995b9a8`; GitHub release https://github.com/tracesfx/margin/releases/tag/v0.1.0 with `Margin_0.1.0_x64-setup.exe` (24.65 MiB), `Margin_0.1.0_x64_en-US.msi` (34.19 MiB) and `SHA256SUMS.txt`. Built after the update check landed, so they include it.
+- Checked before publishing: the NSIS installer installed silently (per user, to a scratch folder) with the font licences in `licenses/fonts/`; the installed `margin.exe` started, rendered, and had the update check off; the uninstaller removed it and left no uninstall entry. The MSI was built but not installed.
+- Checked after publishing: the live update check reports latest 0.1.0 / current 0.1.0, not newer, with the release URL.
+- Not code-signed. To cut the next release: bump the version in `package.json`, `src-tauri/Cargo.toml` and `tauri.conf.json`, `npm run tauri build`, tag `vX.Y.Z`, and `gh release create` with the two installers and a checksum file.
