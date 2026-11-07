@@ -4,7 +4,7 @@
  * Versioned: breaking changes bump the major part of `sdkVersion` and need a
  * migration note in `docs/sdk.md`. Pre-1.0 while M1–M5 shape it.
  */
-export const sdkVersion = "0.7.0";
+export const sdkVersion = "0.8.0";
 
 export * from "./extensions";
 export { story, StoryError, type Story } from "./story";
@@ -86,7 +86,7 @@ export {
 } from "./settings";
 export { uiState, useUiState } from "./uiState";
 export { editorHost, type EditorHandleApi, type TextTarget } from "./editorHost";
-export { EXPORT_VIEW, exporter, openExport, pickExportDir } from "./exporter";
+export { EXPORT_VIEW, PAGE_VIEW, exporter, openExport, pickExportDir } from "./exporter";
 export { newId } from "./ids";
 export type * from "./bindings";
 export type {

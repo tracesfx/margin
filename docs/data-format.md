@@ -262,6 +262,20 @@ Memory Inspector → Export writes into a folder the author picks: `story-memory
 
 Insights views export their own data from the view: `<view>.csv` (RFC 4180, CRLF; cells that would run as a formula in a spreadsheet get a leading apostrophe), plus `<view>.png` and `<view>.svg` for the chart. The file name is a plain name with one of those three extensions, saved in a folder the author picks; an existing file gets a number instead of being overwritten.
 
+### `templates/<id>.yaml` (schemaVersion 1)
+
+A template the author saved from an export profile (M7). Built-in templates are in the app, not on disk. The id is a lowercase ULID and is the file name; profiles refer to it by `template` but carry their own copy of `settings`, so removing a template never changes a profile. A file that cannot be read is ignored.
+
+```yaml
+schemaVersion: 1
+id: 01jc...          # lowercase ULID
+name: My house style
+settings:            # the same fields as a profile's `settings`
+  font: Libertinus Serif
+  sizePt: 11.0
+  # ...
+```
+
 ### `exports/profiles.yaml` (schemaVersion 1)
 
 Export profiles (SPEC §12.5). The file does not exist until the author changes a profile; until then Margin offers five built-in ones. `profiles` is a list; each profile has `id`, `name`, `format` (`markdown`, `text`, `docxManuscript`, `docxStyled`, `pdf`), `includeFrontMatter`, `includeBackMatter`, `titlePage`, `toc`, `copyright`, `dedication`, `epigraph`, `epigraphBy`, `numbering` (`none`, `numeric`, `words`), `chapterLabel`, `sceneSeparator`, `template` (the built-in template it started from: `classic`, `modern`, `literary`, `nonfiction`), `settings`, `splitChapters`, `italics` (`underscores`, `asterisks`, `plain`), `manuscriptFont`, `contact` (`name`, `address`, `email`, `phone`), `outputDir` and `fileName`.

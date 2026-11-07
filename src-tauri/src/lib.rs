@@ -180,6 +180,11 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             e::export_run,
             e::export_preview,
             e::export_preview_pages,
+            e::export_template_save,
+            e::export_template_delete,
+            e::page_view,
+            e::page_view_pages,
+            e::page_view_hit,
         ])
         .events(collect_events![MarginEvent])
         // Every type has the same shape in both directions.

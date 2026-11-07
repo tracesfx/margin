@@ -5,6 +5,7 @@
 use super::book::{Book, Piece, plain};
 use super::types::{ChapterOpening, ExportProfile, TemplateSettings};
 use crate::dialect::{Block, Inline, Mark};
+use std::cell::RefCell;
 
 /// Escape text for Typst markup. Every ASCII punctuation mark except the
 /// straight quotes (which Typst turns into curly ones) gets a backslash, so
@@ -62,6 +63,58 @@ pub fn bundled(font: &str) -> bool {
 struct Cx<'a> {
     t: &'a TemplateSettings,
     real_sc: bool,
+    /// Source map for the Page view: the document being written and the
+    /// index of its next text block. `None` = no markers (exports).
+    marks: Option<RefCell<(String, u32)>>,
+}
+
+impl Cx<'_> {
+    /// A comment Typst ignores, naming the text block that follows.
+    fn mark(&self, out: &mut String) {
+        if let Some(m) = &self.marks {
+            let mut m = m.borrow_mut();
+            out.push_str(&format!("/*{MARK}{}:{}*/", m.0, m.1));
+            m.1 += 1;
+        }
+    }
+    /// A comment ending the previous text block (headings, breaks).
+    fn mark_none(&self, out: &mut String) {
+        if self.marks.is_some() {
+            out.push_str(&format!("/*{MARK}-*/"));
+        }
+    }
+    fn enter(&self, doc: &str) {
+        if let Some(m) = &self.marks {
+            *m.borrow_mut() = (doc.to_string(), 0);
+        }
+    }
+}
+
+/// Prefix of a source-map comment (`/*§<doc>:<index>*/`).
+pub const MARK: &str = "§";
+
+/// Where each text block starts in the markup: (offset after the marker,
+/// document id, text block index). Offsets before the first marker, and
+/// after a "none" marker, belong to no text block.
+pub fn source_map(markup: &str) -> Vec<(usize, Option<(String, u32)>)> {
+    let open = format!("/*{MARK}");
+    let mut out = Vec::new();
+    let mut at = 0;
+    while let Some(i) = markup[at..].find(&open) {
+        let start = at + i;
+        let body = start + open.len();
+        let Some(j) = markup[body..].find("*/") else {
+            break;
+        };
+        let label = &markup[body..body + j];
+        let end = body + j + 2;
+        let target = label
+            .split_once(':')
+            .and_then(|(d, n)| Some((d.to_string(), n.parse().ok()?)));
+        out.push((end, target));
+        at = end;
+    }
+    out
 }
 
 ///
@@ -202,6 +255,7 @@ fn blocks(cx: &Cx, bs: &[Block], flow: &mut Flow, out: &mut String, flush: bool)
     for b in bs {
         match b {
             Block::Paragraph(c) => {
+                cx.mark(out);
                 let body = if flow.opening {
                     match cx.t.chapter_opening {
                         ChapterOpening::Plain => inline(c, cx.real_sc),
@@ -220,6 +274,7 @@ fn blocks(cx: &Cx, bs: &[Block], flow: &mut Flow, out: &mut String, flush: bool)
                 flow.opening = false;
             }
             Block::Heading { level, content } => {
+                cx.mark(out);
                 let size = match level {
                     2 => "1.25em",
                     3 => "1.1em",
@@ -232,6 +287,7 @@ fn blocks(cx: &Cx, bs: &[Block], flow: &mut Flow, out: &mut String, flush: bool)
                 flow.first = true;
             }
             Block::SceneBreak => {
+                cx.mark_none(out);
                 out.push_str("#scene-break()\n\n");
                 flow.first = true;
                 flow.opening = false;
@@ -447,10 +503,17 @@ fn title_pages(book: &Book, p: &ExportProfile, out: &mut String) {
 
 /// The whole book as Typst source.
 pub fn markup(book: &Book, p: &ExportProfile) -> String {
+    markup_with(book, p, false)
+}
+
+/// The book as Typst source. With `marks`, every text block is preceded by
+/// a comment naming its document and index (see [`source_map`]).
+pub fn markup_with(book: &Book, p: &ExportProfile, marks: bool) -> String {
     let t = &p.settings;
     let cx = Cx {
         t,
         real_sc: bundled(&t.font),
+        marks: marks.then(|| RefCell::new((String::new(), 0))),
     };
     let has_parts = book.body.iter().any(|x| matches!(x, Piece::Part { .. }));
     let mut out = preamble(book, p, has_parts);
@@ -474,8 +537,8 @@ pub fn markup(book: &Book, p: &ExportProfile) -> String {
             "#set page(numbering: \"i\", header: none, {})\n",
             folio("i")
         ));
-        for piece in &book.front {
-            matter(&cx, piece, &mut out);
+        for (piece, doc) in book.front.iter().zip(&book.front_docs) {
+            matter(&cx, doc, piece, &mut out);
         }
     }
 
@@ -503,7 +566,8 @@ pub fn markup(book: &Book, p: &ExportProfile) -> String {
         first: true,
         opening: false,
     };
-    for piece in &book.body {
+    for (piece, doc) in book.body.iter().zip(&book.body_docs) {
+        cx.mark_none(&mut out);
         match piece {
             Piece::Part { title } => {
                 out.push_str(&format!("#part-open({})\n\n", lit(title)));
@@ -534,20 +598,25 @@ pub fn markup(book: &Book, p: &ExportProfile) -> String {
                 flow.first = true;
                 flow.opening = false;
             }
-            Piece::Blocks(b) => blocks(&cx, b, &mut flow, &mut out, false),
-            Piece::Matter { .. } => matter(&cx, piece, &mut out),
+            Piece::Blocks(b) => {
+                cx.enter(doc);
+                blocks(&cx, b, &mut flow, &mut out, false);
+            }
+            Piece::Matter { .. } => matter(&cx, doc, piece, &mut out),
         }
     }
 
     // Back matter.
-    for piece in &book.back {
-        matter(&cx, piece, &mut out);
+    for (piece, doc) in book.back.iter().zip(&book.back_docs) {
+        matter(&cx, doc, piece, &mut out);
     }
     out
 }
 
-fn matter(cx: &Cx, piece: &Piece, out: &mut String) {
+fn matter(cx: &Cx, doc: &str, piece: &Piece, out: &mut String) {
     if let Piece::Matter { title, blocks: b } = piece {
+        cx.mark_none(out);
+        cx.enter(doc);
         let t = title
             .as_ref()
             .map(|t| lit(t))

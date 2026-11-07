@@ -34,6 +34,16 @@ cmd!(export_profile_save(profile: ExportProfile) -> Vec<ExportProfile> =
 cmd!(export_profile_delete(id: String) -> Vec<ExportProfile> =
     |s| blocking(move || s.profile_delete(&id)).await);
 cmd!(export_templates() -> Vec<TemplateInfo> = |s| Ok(s.templates()));
+cmd!(export_template_save(id: Option<String>, name: String, settings: TemplateSettings) -> Vec<TemplateInfo> =
+    |s| blocking(move || s.template_save(id, &name, settings)).await);
+cmd!(export_template_delete(id: String) -> Vec<TemplateInfo> =
+    |s| blocking(move || s.template_delete(&id)).await);
+cmd!(page_view(doc_id: String, profile: ExportProfile) -> PreviewInfo =
+    |s| blocking(move || s.page_view(&doc_id, &profile)).await);
+cmd!(page_view_pages(key: String, start: u32, count: u32) -> Vec<PreviewPage> =
+    |s| blocking(move || s.page_view_pages(&key, start, count)).await);
+cmd!(page_view_hit(key: String, page: u32, x: f64, y: f64) -> Option<PageHit> =
+    |s| blocking(move || s.page_view_hit(&key, page, x, y)).await);
 cmd!(export_fonts() -> Vec<String> = |s| blocking(move || Ok(s.fonts())).await);
 cmd!(export_run(profile: ExportProfile, dir: Option<String>) -> ExportResult =
     |s| blocking(move || s.run(&profile, dir.as_deref())).await);

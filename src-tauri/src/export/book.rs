@@ -51,6 +51,11 @@ pub struct Book {
     pub front: Vec<Piece>,
     pub body: Vec<Piece>,
     pub back: Vec<Piece>,
+    /// The document each piece came from, parallel to `front`, `body` and
+    /// `back` (used to map pages back to the text, SPEC §12.2).
+    pub front_docs: Vec<String>,
+    pub body_docs: Vec<String>,
+    pub back_docs: Vec<String>,
     pub words: u32,
 }
 
@@ -108,6 +113,7 @@ impl Book {
         let mut front = Vec::new();
         let mut body = Vec::new();
         let mut back = Vec::new();
+        let (mut front_docs, mut body_docs, mut back_docs) = (Vec::new(), Vec::new(), Vec::new());
         let mut words = 0u32;
         let mut chapter_no = 0u32;
         let mut need_break = false;
@@ -123,12 +129,13 @@ impl Book {
                     if !wanted {
                         continue;
                     }
-                    let out = if item.section == Section::FrontMatter {
-                        &mut front
+                    let (out, ids) = if item.section == Section::FrontMatter {
+                        (&mut front, &mut front_docs)
                     } else {
-                        &mut back
+                        (&mut back, &mut back_docs)
                     };
                     out.push(matter(item));
+                    ids.push(item.id.clone());
                 }
                 Section::Manuscript => {
                     words = words.saturating_add(dialect::word_count(&item.ast));
@@ -137,6 +144,7 @@ impl Book {
                             body.push(Piece::Part {
                                 title: item.title.trim().to_string(),
                             });
+                            body_docs.push(item.id.clone());
                             need_break = false;
                         }
                         DocKind::Chapter => {
@@ -148,6 +156,7 @@ impl Book {
                                 p.numbering,
                             );
                             body.push(Piece::Chapter { label, title });
+                            body_docs.push(item.id.clone());
                             need_break = false;
                         }
                         _ => {}
@@ -156,8 +165,10 @@ impl Book {
                     if !blocks.is_empty() {
                         if need_break && !matches!(item.kind, DocKind::Part | DocKind::Chapter) {
                             body.push(Piece::SceneBreak);
+                            body_docs.push(item.id.clone());
                         }
                         body.push(Piece::Blocks(blocks));
+                        body_docs.push(item.id.clone());
                         need_break = true;
                     }
                 }
@@ -170,6 +181,9 @@ impl Book {
             front,
             body,
             back,
+            front_docs,
+            body_docs,
+            back_docs,
             words,
         }
     }
@@ -180,6 +194,43 @@ fn matter(item: &BookItem) -> Piece {
     Piece::Matter {
         title: (!title.is_empty()).then(|| title.to_string()),
         blocks: clean(&item.ast),
+    }
+}
+
+impl Book {
+    /// Only the chapter (or part, or matter document) that holds `doc`,
+    /// with its numbering as in the whole book. `None` if the document is
+    /// not in the book.
+    pub fn only_section_of(&self, doc: &str) -> Option<Book> {
+        let mut out = Book {
+            front: Vec::new(),
+            body: Vec::new(),
+            back: Vec::new(),
+            front_docs: Vec::new(),
+            body_docs: Vec::new(),
+            back_docs: Vec::new(),
+            ..self.clone()
+        };
+        if let Some(i) = self.front_docs.iter().position(|d| d == doc) {
+            out.front.push(self.front[i].clone());
+            out.front_docs.push(doc.to_string());
+            return Some(out);
+        }
+        if let Some(i) = self.back_docs.iter().position(|d| d == doc) {
+            out.back.push(self.back[i].clone());
+            out.back_docs.push(doc.to_string());
+            return Some(out);
+        }
+        // A section starts at a part or chapter heading.
+        let opens = |p: &Piece| matches!(p, Piece::Part { .. } | Piece::Chapter { .. });
+        let at = self.body_docs.iter().position(|d| d == doc)?;
+        let start = (0..=at).rev().find(|&i| opens(&self.body[i])).unwrap_or(0);
+        let end = (at + 1..self.body.len())
+            .find(|&i| opens(&self.body[i]))
+            .unwrap_or(self.body.len());
+        out.body = self.body[start..end].to_vec();
+        out.body_docs = self.body_docs[start..end].to_vec();
+        Some(out)
     }
 }
 

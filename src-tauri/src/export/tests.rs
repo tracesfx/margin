@@ -603,3 +603,201 @@ fn small_caps_lead_in_works_for_any_font() {
     p.settings.font = "Georgia".into();
     assert!(typeset::markup(&book(&f, &p), &p).contains("#sc(\"Odd\")"));
 }
+
+fn doc_id(f: &Fx, title: &str) -> String {
+    f.story
+        .book_source()
+        .unwrap()
+        .items
+        .into_iter()
+        .find(|i| i.title == title)
+        .unwrap()
+        .id
+}
+
+#[test]
+fn saved_templates_are_listed_renamed_deleted_and_restored() {
+    let f = fixture();
+    let before = f.svc.templates();
+    assert!(before.iter().all(|t| t.builtin));
+    let mut s = profile_of("print").settings;
+    s.font = "Libertinus Serif".into();
+    s.trim_width_in = 5.25;
+    let all = f
+        .svc
+        .template_save(None, "  My house style ", s.clone())
+        .unwrap();
+    let mine = all.iter().find(|t| !t.builtin).unwrap().clone();
+    assert_eq!(mine.name, "My house style");
+    assert_eq!(mine.settings, s);
+    assert_eq!(all.len(), before.len() + 1);
+    assert!(
+        f.root
+            .join("templates")
+            .join(format!("{}.yaml", mine.id))
+            .exists()
+    );
+
+    // Rename keeps the id; the settings can change with it.
+    let mut s2 = s.clone();
+    s2.size_pt = 12.0;
+    let all = f
+        .svc
+        .template_save(Some(mine.id.clone()), "Renamed", s2.clone())
+        .unwrap();
+    let again = all.iter().filter(|t| !t.builtin).collect::<Vec<_>>();
+    assert_eq!(
+        (again.len(), again[0].name.as_str(), again[0].id.as_str()),
+        (1, "Renamed", mine.id.as_str())
+    );
+    assert_eq!(again[0].settings, s2);
+
+    // Delete, then restore it with the same id (the undo).
+    let all = f.svc.template_delete(&mine.id).unwrap();
+    assert!(all.iter().all(|t| t.builtin));
+    let all = f
+        .svc
+        .template_save(Some(mine.id.clone()), "Renamed", s2)
+        .unwrap();
+    assert!(all.iter().any(|t| t.id == mine.id));
+}
+
+#[test]
+fn templates_refuse_bad_names_ids_and_built_in_overwrites() {
+    let f = fixture();
+    let s = profile_of("print").settings;
+    assert!(f.svc.template_save(None, "   ", s.clone()).is_err());
+    assert!(
+        f.svc
+            .template_save(Some("classic".into()), "Mine", s.clone())
+            .is_err()
+    );
+    assert!(
+        f.svc
+            .template_save(Some("../escape".into()), "Mine", s)
+            .is_err()
+    );
+    assert!(f.svc.template_delete("a.b").is_err());
+    assert!(
+        !f.root.join("templates").exists()
+            || f.root
+                .join("templates")
+                .read_dir()
+                .unwrap()
+                .next()
+                .is_none()
+    );
+}
+
+#[test]
+fn a_broken_template_file_does_not_hide_the_others() {
+    let f = fixture();
+    let s = profile_of("print").settings;
+    f.svc.template_save(None, "Good", s).unwrap();
+    fs::write(f.root.join("templates").join("broken.yaml"), "not: [valid").unwrap();
+    let all = f.svc.templates();
+    assert!(all.iter().any(|t| t.name == "Good"));
+    assert!(!all.iter().any(|t| t.id == "broken"));
+}
+
+#[test]
+fn a_chapter_is_cut_out_with_its_book_numbering() {
+    let f = fixture();
+    let mut p = profile_of("print");
+    p.numbering = Numbering::Numeric;
+    let b = book(&f, &p);
+    let second = b.only_section_of(&doc_id(&f, "Chapter 2")).unwrap();
+    assert!(second.front.is_empty() && second.back.is_empty());
+    assert_eq!(second.body.len(), second.body_docs.len());
+    // Chapter 2's title already says "Chapter 2", so it is not numbered twice,
+    // and the first chapter's scenes are not in it.
+    assert!(second.body.iter().all(|x| !matches!(x, Piece::SceneBreak)));
+    let first = b.only_section_of(&doc_id(&f, "Market")).unwrap();
+    assert!(matches!(&first.body[0], Piece::Chapter { title: Some(t), .. } if t == "The Arrival"));
+    assert!(first.body_docs.contains(&doc_id(&f, "Harbor")));
+    assert!(!first.body_docs.contains(&doc_id(&f, "Chapter 2")));
+    let foreword = b.only_section_of(&doc_id(&f, "Foreword")).unwrap();
+    assert_eq!((foreword.front.len(), foreword.body.len()), (1, 0));
+    assert!(b.only_section_of("not-a-document").is_none());
+}
+
+#[test]
+fn markers_leave_the_typeset_book_unchanged() {
+    let f = fixture();
+    let p = profile_of("print");
+    let b = book(&f, &p);
+    let plain = typeset::markup(&b, &p);
+    assert!(!plain.contains(typeset::MARK));
+    let marked = typeset::markup_with(&b, &p, true);
+    assert!(marked.contains(typeset::MARK));
+    let a = super::world::compile(plain).unwrap();
+    let c = super::world::compile(marked).unwrap();
+    assert_eq!(a.pages().len(), c.pages().len());
+    let map = typeset::source_map(&typeset::markup_with(&b, &p, true));
+    let harbor = doc_id(&f, "Harbor");
+    assert!(
+        map.iter()
+            .any(|(_, t)| t.as_ref() == Some(&(harbor.clone(), 0)))
+    );
+    assert!(
+        map.iter()
+            .any(|(_, t)| t.as_ref() == Some(&(harbor.clone(), 1)))
+    );
+}
+
+#[test]
+fn clicking_a_page_finds_the_paragraph_it_came_from() {
+    let f = fixture();
+    let p = profile_of("print");
+    let harbor = doc_id(&f, "Harbor");
+    let market = doc_id(&f, "Market");
+    let info = f.svc.page_view(&harbor, &p).unwrap();
+    assert!(info.page_count > 0);
+    assert!(
+        f.svc.page_view_pages(&info.key, 0, 1).unwrap()[0]
+            .svg
+            .starts_with("<svg")
+    );
+
+    // Scan the first spread of pages for what each point belongs to.
+    let mut seen = std::collections::BTreeSet::new();
+    for page in 0..info.page_count.min(4) {
+        let mut y = 20.0;
+        while y < info.height_pt {
+            let mut x = 20.0;
+            while x < info.width_pt {
+                if let Some(h) = f.svc.page_view_hit(&info.key, page, x, y).unwrap() {
+                    seen.insert((h.doc, h.block));
+                }
+                x += 12.0;
+            }
+            y += 6.0;
+        }
+    }
+    // Both paragraphs of Harbor and a paragraph of Market, and nothing from Chapter 2.
+    assert!(seen.contains(&(harbor.clone(), 0)), "{seen:?}");
+    assert!(seen.contains(&(harbor.clone(), 1)), "{seen:?}");
+    assert!(seen.iter().any(|(d, _)| *d == market), "{seen:?}");
+    assert!(
+        !seen.iter().any(|(d, _)| *d == doc_id(&f, "Chapter 2")),
+        "{seen:?}"
+    );
+    // Far outside the page is nothing; a stale key is an error.
+    assert_eq!(
+        f.svc.page_view_hit(&info.key, 0, 5000.0, 5000.0).unwrap(),
+        None
+    );
+    assert!(f.svc.page_view_hit("stale", 0, 10.0, 10.0).is_err());
+    // The same chapter reuses the typesetting.
+    assert_eq!(f.svc.page_view(&market, &p).unwrap().key, info.key);
+}
+
+#[test]
+fn the_page_view_never_changes_the_manuscript() {
+    let f = fixture();
+    let before = fs::read(f.root.join("project.yaml")).unwrap();
+    let harbor = doc_id(&f, "Harbor");
+    f.svc.page_view(&harbor, &profile_of("print")).unwrap();
+    assert_eq!(fs::read(f.root.join("project.yaml")).unwrap(), before);
+    assert!(f.svc.page_view("missing", &profile_of("print")).is_err());
+}

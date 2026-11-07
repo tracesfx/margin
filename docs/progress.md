@@ -387,9 +387,21 @@ A throwaway project: the first 8 chapters of the 50k fixture (11,605 words, 16 s
 - [x] First-run guide (`src/app/Onboarding.tsx`): create, connect a model, five shortcuts; dismissible; "Show the welcome guide"
 - [x] Accessibility pass: `main` landmark, tabs focusable and operable with Enter/Space, sprint clock not announced every second, `forced-colors` styles. Reduced motion and the focus ring were already in place
 - [~] Installer: NSIS and MSI targets are configured and `npm run tauri build` compiles the release `margin.exe`, but **packaging failed on this machine** (`FileAssociation.nsh` missing from the cached `%LOCALAPPDATA%	auriNSIS`, an incomplete tool download). No installer was produced or tested. Retry after clearing that cache with network access
-- [ ] In-editor Page view with click-to-source, bundled OFL fonts, saved custom templates, update check: **not built** (see above)
+- [x] In-editor Page view with click-to-source and saved custom templates (second pass, below)
+- [ ] Bundled OFL fonts and the update check: **not built** (see above)
 - [ ] §14 performance pass: not re-run in M7 (M5 timed the Insights views; typing latency was not re-measured)
 
 ### Tests (M7)
 - Vitest: 169 pass (sprint arithmetic and summary, voice filtering and sentence chunking); typecheck and ESLint clean.
 - Not verified by driving the running app: the sprint timer, read aloud (needs an installed local voice) and the guide were not exercised over CDP.
+
+### M7 second pass: Page view and saved templates (2026-11-07)
+Design chosen with the author: a separate read-only tab beside the editor; the current chapter only, with click-to-source; templates saved from a profile into the project; any installed font.
+- [x] `Book` keeps the document behind each piece (`front_docs`/`body_docs`/`back_docs`) and can cut out one chapter with its real numbering (`only_section_of`)
+- [x] Typst markup can carry source-map comments (`markup_with(.., marks)`); exports never do. A marked book typesets to the same page count as an unmarked one (test)
+- [x] Click mapping: nearest glyph within 28 pt → generated-source offset (`WorldExt::range`) → last marker before it → `{doc, block}` with the block numbered as `story.search` numbers them (`export/pageview.rs`)
+- [x] Commands `page_view`, `page_view_pages`, `page_view_hit`, `export_template_save`, `export_template_delete`; SDK 0.8.0
+- [x] `pageview` module (`Ctrl+Alt+L`) and the template buttons in the profile form (Save as template, Update, Rename, Delete; each undoable)
+- Rust tests: 7 new in `export::tests` (templates: save/rename/delete/restore, refused names and ids, a broken file; chapter cut-out; markers leave the book unchanged; click → paragraph; the Page view leaves the project untouched). Vitest: page arithmetic.
+- Verified in the running app over CDP (2026-11-07), throwaway project (2 chapters, 3 scenes): **11 of 11 scripted checks passed**. `Ctrl+Alt+L` opens the Page view in the split pane; clicking lines on its pages put the editor on the right paragraph (4 distinct paragraphs across both scenes of the chapter, including the second scene's, which sits on page 2); the next chapter's text is not in these pages; "Save as template…" wrote `templates/<id>.yaml`, the template shows as "(saved)" in the list, Delete removed the file and Undo restored it. Screenshots checked.
+- Findings: the Page view first lost its scene when the focused tabs were not documents (fixed: it remembers the last one). Page numbers in the Page view restart at 1 for each chapter. Chapter headings and page furniture do not jump anywhere (by design). The default "Garamond" font is a system font, so the Page view shows the existing embedding-licence warning.

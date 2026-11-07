@@ -33,6 +33,7 @@ pub fn builtin_templates() -> Vec<TemplateInfo> {
     let t = |id: &str, name: &str, settings| TemplateInfo {
         id: id.into(),
         name: name.into(),
+        builtin: true,
         settings,
     };
     vec![
@@ -92,6 +93,89 @@ pub fn builtin_templates() -> Vec<TemplateInfo> {
 
 pub fn template(id: &str) -> Option<TemplateInfo> {
     builtin_templates().into_iter().find(|t| t.id == id)
+}
+
+pub const TEMPLATES_DIR: &str = "templates";
+
+fn template_path(root: &Path, id: &str) -> Result<std::path::PathBuf> {
+    // Ids become file names: letters and digits only, so nothing escapes the folder.
+    if id.is_empty() || !id.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err(MarginError::Invalid("not a template id".into()));
+    }
+    Ok(root.join(TEMPLATES_DIR).join(format!("{id}.yaml")))
+}
+
+/// The built-in templates, then the author's saved ones by name. A file that
+/// cannot be read is left out rather than hiding the others.
+pub fn list_templates(root: &Path) -> Vec<TemplateInfo> {
+    let mut out = builtin_templates();
+    let mut custom = Vec::new();
+    if let Ok(dir) = fs::read_dir(root.join(TEMPLATES_DIR)) {
+        for entry in dir.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|e| e.to_str()) != Some("yaml") {
+                continue;
+            }
+            let Ok(text) = fs::read_to_string(&path) else {
+                continue;
+            };
+            let Ok(file) = serde_norway::from_str::<TemplateFile>(&text) else {
+                continue;
+            };
+            custom.push(TemplateInfo {
+                id: file.id,
+                name: file.name,
+                builtin: false,
+                settings: file.settings,
+            });
+        }
+    }
+    custom.sort_by_key(|t| t.name.to_lowercase());
+    out.extend(custom);
+    out
+}
+
+/// Save a template. With an `id` of a saved template it is replaced (rename
+/// or update, and undoing a delete); without one, a new template is made.
+/// Built-in ids are refused.
+pub fn save_template(
+    root: &Path,
+    id: Option<String>,
+    name: &str,
+    settings: TemplateSettings,
+) -> Result<Vec<TemplateInfo>> {
+    let name = name.trim();
+    if name.is_empty() {
+        return Err(MarginError::Invalid("a template needs a name".into()));
+    }
+    let id = match id {
+        Some(id) if builtin_templates().iter().any(|t| t.id == id) => {
+            return Err(MarginError::Invalid(
+                "built-in templates cannot be changed; save a copy under a new name".into(),
+            ));
+        }
+        Some(id) => id,
+        None => ulid::Ulid::generate().to_string().to_lowercase(),
+    };
+    let file = TemplateFile {
+        schema_version: TEMPLATE_SCHEMA_VERSION,
+        id: id.clone(),
+        name: name.to_string(),
+        settings,
+    };
+    let yaml = serde_norway::to_string(&file)?;
+    atomic_write(&template_path(root, &id)?, yaml.as_bytes())?;
+    Ok(list_templates(root))
+}
+
+pub fn delete_template(root: &Path, id: &str) -> Result<Vec<TemplateInfo>> {
+    let path = template_path(root, id)?;
+    match fs::remove_file(&path) {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(e.into()),
+    }
+    Ok(list_templates(root))
 }
 
 fn profile(id: &str, name: &str, format: BookFormat) -> ExportProfile {

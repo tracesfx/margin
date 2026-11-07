@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 
 import type { BookFormat, ChapterOpening, ExportProfile, ItalicStyle, Numbering, TemplateInfo, TemplateSettings } from "@margin/sdk";
 
+import { deleteTemplate, renameTemplate, saveTemplateAs, updateTemplate } from "./store";
 import { FORMATS, TRIMS, changeFormat, clampNumber, customised, isDocx, isPlain, trimId, usesTemplate, withTemplate, withTrim } from "./model";
 
 interface Props {
@@ -48,6 +49,7 @@ export function ProfileForm({ profile: p, templates, fonts, onChange, onChooseFo
   const f: BookFormat = p.format;
   const typeset = usesTemplate(f);
   const changed = customised(p, templates);
+  const saved = templates.find((t) => t.id === p.template && !t.builtin);
 
   return (
     <form className="export-form" onSubmit={(e) => e.preventDefault()} aria-label="Export settings">
@@ -200,14 +202,37 @@ export function ProfileForm({ profile: p, templates, fonts, onChange, onChooseFo
               <select value={p.template} onChange={(e) => onChange(withTemplate(p, templates, e.target.value))}>
                 {templates.map((t) => (
                   <option key={t.id} value={t.id}>
-                    {t.name}
+                    {t.builtin ? t.name : `${t.name} (saved)`}
                   </option>
                 ))}
+                {!templates.some((t) => t.id === p.template) && <option value={p.template}>Removed template</option>}
               </select>
               {changed.length > 0 && (
                 <button type="button" onClick={() => onChange(withTemplate(p, templates, p.template))}>
                   Reset
                 </button>
+              )}
+            </span>
+          </Row>
+          <Row label="Saved templates" hint={saved ? "Saved in this project's templates folder." : "Keep these settings as a template for other profiles."}>
+            <span className="export-folder">
+              <button type="button" onClick={() => void saveTemplateAs(p)}>
+                Save as template…
+              </button>
+              {saved && changed.length > 0 && (
+                <button type="button" onClick={() => void updateTemplate(p)}>
+                  Update “{saved.name}”
+                </button>
+              )}
+              {saved && (
+                <>
+                  <button type="button" onClick={() => void renameTemplate(saved.id)}>
+                    Rename…
+                  </button>
+                  <button type="button" onClick={() => void deleteTemplate(saved.id)}>
+                    Delete
+                  </button>
+                </>
               )}
             </span>
           </Row>

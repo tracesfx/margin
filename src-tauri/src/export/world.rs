@@ -98,3 +98,22 @@ pub fn compile(markup: String) -> Result<PagedDocument> {
         MarginError::Internal(format!("typesetting failed: {msg}"))
     })
 }
+
+/// Like [`compile`], but keeps the world so spans can be mapped back to the
+/// generated source (the Page view's click-to-source).
+pub fn compile_with_world(markup: String) -> Result<(PagedDocument, BookWorld)> {
+    let world = BookWorld::new(markup)?;
+    let out = typst::compile::<PagedDocument>(&world);
+    match out.output {
+        Ok(doc) => Ok((doc, world)),
+        Err(errs) => {
+            let msg = errs
+                .iter()
+                .take(3)
+                .map(|e| e.message.to_string())
+                .collect::<Vec<_>>()
+                .join("; ");
+            Err(MarginError::Internal(format!("typesetting failed: {msg}")))
+        }
+    }
+}

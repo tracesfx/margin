@@ -105,6 +105,71 @@ export async function removeProfile(id: string): Promise<void> {
   }
 }
 
+/** Save the profile's settings as a template in the project, and switch the profile to it. */
+export async function saveTemplateAs(p: ExportProfile): Promise<void> {
+  const name = await workbench.ask({ title: "Save these settings as a template", placeholder: "Template name", initial: "" });
+  if (!name?.trim()) return;
+  try {
+    const before = new Set(useExportStore.getState().templates.map((t) => t.id));
+    const all = await exporter.saveTemplate(null, name, p.settings);
+    useExportStore.setState({ templates: all });
+    const made = all.find((t) => !before.has(t.id));
+    if (made) editProfile({ ...p, template: made.id });
+    workbench.notify({ message: `Saved template "${name.trim()}"`, timeoutMs: 3000 });
+  } catch (e) {
+    useExportStore.setState({ error: message(e) });
+  }
+}
+
+/** Replace a saved template's settings with the profile's current ones (undoable). */
+export async function updateTemplate(p: ExportProfile): Promise<void> {
+  const old = useExportStore.getState().templates.find((t) => t.id === p.template && !t.builtin);
+  if (!old) return;
+  try {
+    const all = await exporter.saveTemplate(old.id, old.name, p.settings);
+    useExportStore.setState({ templates: all });
+    workbench.notify({
+      message: `Updated template "${old.name}"`,
+      action: { label: "Undo", run: () => void exporter.saveTemplate(old.id, old.name, old.settings).then((t) => useExportStore.setState({ templates: t })) },
+    });
+  } catch (e) {
+    useExportStore.setState({ error: message(e) });
+  }
+}
+
+export async function renameTemplate(id: string): Promise<void> {
+  const old = useExportStore.getState().templates.find((t) => t.id === id && !t.builtin);
+  if (!old) return;
+  const name = await workbench.ask({ title: "Rename template", initial: old.name });
+  if (!name?.trim() || name.trim() === old.name) return;
+  try {
+    const all = await exporter.saveTemplate(old.id, name, old.settings);
+    useExportStore.setState({ templates: all });
+    workbench.notify({
+      message: `Renamed to "${name.trim()}"`,
+      action: { label: "Undo", run: () => void exporter.saveTemplate(old.id, old.name, old.settings).then((t) => useExportStore.setState({ templates: t })) },
+    });
+  } catch (e) {
+    useExportStore.setState({ error: message(e) });
+  }
+}
+
+/** Delete a saved template. Profiles keep their settings; Undo brings it back. */
+export async function deleteTemplate(id: string): Promise<void> {
+  const gone = useExportStore.getState().templates.find((t) => t.id === id && !t.builtin);
+  if (!gone) return;
+  try {
+    const all = await exporter.deleteTemplate(id);
+    useExportStore.setState({ templates: all });
+    workbench.notify({
+      message: `Removed template "${gone.name}"`,
+      action: { label: "Undo", run: () => void exporter.saveTemplate(gone.id, gone.name, gone.settings).then((t) => useExportStore.setState({ templates: t })) },
+    });
+  } catch (e) {
+    useExportStore.setState({ error: message(e) });
+  }
+}
+
 /** Export with a profile. Asks for a folder when the profile has none. */
 export async function runExport(p: ExportProfile): Promise<void> {
   if (useExportStore.getState().running) return;

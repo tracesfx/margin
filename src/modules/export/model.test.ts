@@ -50,8 +50,8 @@ const profile = (over: Partial<ExportProfile> = {}): ExportProfile => ({
 });
 
 const templates: TemplateInfo[] = [
-  { id: "classic", name: "Classic", settings: settings() },
-  { id: "modern", name: "Modern", settings: settings({ font: "Georgia", indentEm: 0, trimWidthIn: 6, trimHeightIn: 9 }) },
+  { id: "classic", name: "Classic", builtin: true, settings: settings() },
+  { id: "modern", name: "Modern", builtin: true, settings: settings({ font: "Georgia", indentEm: 0, trimWidthIn: 6, trimHeightIn: 9 }) },
 ];
 
 describe("export model", () => {

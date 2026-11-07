@@ -163,6 +163,11 @@ export const commands = {
 	exportRun: (profile: ExportProfile, dir: string | null) => typedError<ExportResult, MarginError>(__TAURI_INVOKE("export_run", { profile, dir })),
 	exportPreview: (profile: ExportProfile) => typedError<PreviewInfo, MarginError>(__TAURI_INVOKE("export_preview", { profile })),
 	exportPreviewPages: (key: string, start: number, count: number) => typedError<PreviewPage[], MarginError>(__TAURI_INVOKE("export_preview_pages", { key, start, count })),
+	exportTemplateSave: (id: string | null, name: string, settings: TemplateSettings) => typedError<TemplateInfo[], MarginError>(__TAURI_INVOKE("export_template_save", { id, name, settings })),
+	exportTemplateDelete: (id: string) => typedError<TemplateInfo[], MarginError>(__TAURI_INVOKE("export_template_delete", { id })),
+	pageView: (docId: string, profile: ExportProfile) => typedError<PreviewInfo, MarginError>(__TAURI_INVOKE("page_view", { docId, profile })),
+	pageViewPages: (key: string, start: number, count: number) => typedError<PreviewPage[], MarginError>(__TAURI_INVOKE("page_view_pages", { key, start, count })),
+	pageViewHit: (key: string, page: number, x: number | null, y: number | null) => typedError<PageHit | null, MarginError>(__TAURI_INVOKE("page_view_hit", { key, page, x, y })),
 };
 
 /** Events */
@@ -945,6 +950,12 @@ export type Numbering =
 
 export type Outcome = "completed" | "cancelled" | "failed";
 
+/**  A text block in a document, as `story.search` and the editor number them. */
+export type PageHit = {
+	doc: string,
+	block: number,
+};
+
 export type PassageHit = {
 	doc: string,
 	docTitle: string,
@@ -1414,6 +1425,8 @@ export type Template = "chatMl" | "gemma" | "mistral";
 export type TemplateInfo = {
 	id: string,
 	name: string,
+	/**  Built in (cannot be changed) or saved by the author in `templates/`. */
+	builtin: boolean,
 	settings: TemplateSettings,
 };
 

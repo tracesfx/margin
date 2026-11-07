@@ -7,6 +7,7 @@
 pub mod book;
 pub mod docx;
 pub mod markdown;
+pub mod pageview;
 pub mod profile;
 pub mod types;
 pub mod typeset;
@@ -33,10 +34,20 @@ struct Cached {
     doc: Arc<PagedDocument>,
 }
 
+/// The last chapter typeset for the Page view, with what is needed to map a
+/// click back to the text.
+struct PageCached {
+    key: String,
+    doc: Arc<PagedDocument>,
+    world: Arc<world::BookWorld>,
+    map: Vec<(usize, Option<(String, u32)>)>,
+}
+
 pub struct ExportService {
     story: Arc<StoryService>,
     bus: Arc<EventBus>,
     cache: Mutex<Option<Cached>>,
+    page_cache: Mutex<Option<PageCached>>,
 }
 
 fn key_of(markup: &str) -> String {
@@ -51,6 +62,7 @@ impl ExportService {
             story,
             bus,
             cache: Mutex::new(None),
+            page_cache: Mutex::new(None),
         })
     }
 
@@ -67,7 +79,23 @@ impl ExportService {
     }
 
     pub fn templates(&self) -> Vec<TemplateInfo> {
-        profile::builtin_templates()
+        match self.story.project_root() {
+            Ok(root) => profile::list_templates(&root),
+            Err(_) => profile::builtin_templates(),
+        }
+    }
+
+    pub fn template_save(
+        &self,
+        id: Option<String>,
+        name: &str,
+        settings: TemplateSettings,
+    ) -> Result<Vec<TemplateInfo>> {
+        profile::save_template(&self.story.project_root()?, id, name, settings)
+    }
+
+    pub fn template_delete(&self, id: &str) -> Result<Vec<TemplateInfo>> {
+        profile::delete_template(&self.story.project_root()?, id)
     }
 
     pub fn fonts(&self) -> Vec<String> {
@@ -132,6 +160,91 @@ impl ExportService {
         })
     }
 
+    /// Typeset the chapter (or part, or matter document) holding `doc_id` for the Page view.
+    pub fn page_view(&self, doc_id: &str, p: &ExportProfile) -> Result<PreviewInfo> {
+        let whole = self.book_for(p)?;
+        let book = whole
+            .only_section_of(doc_id)
+            .ok_or_else(|| MarginError::NotFound("this document is not part of the book".into()))?;
+        // Only the pages of the text itself: no title page, contents or copyright.
+        let p = ExportProfile {
+            title_page: false,
+            toc: false,
+            copyright: String::new(),
+            dedication: String::new(),
+            epigraph: String::new(),
+            epigraph_by: String::new(),
+            ..p.clone()
+        };
+        let markup = typeset::markup_with(&book, &p, true);
+        let key = key_of(&markup);
+        let cached = self
+            .page_cache
+            .lock()
+            .ok()
+            .and_then(|g| g.as_ref().filter(|c| c.key == key).map(|c| c.doc.clone()));
+        let doc = match cached {
+            Some(d) => d,
+            None => {
+                let map = typeset::source_map(&markup);
+                let (doc, world) = world::compile_with_world(markup)?;
+                let doc = Arc::new(doc);
+                if let Ok(mut g) = self.page_cache.lock() {
+                    *g = Some(PageCached {
+                        key: key.clone(),
+                        doc: doc.clone(),
+                        world: Arc::new(world),
+                        map,
+                    });
+                }
+                doc
+            }
+        };
+        let (w, h) = doc
+            .pages()
+            .first()
+            .map(|pg| (pg.frame.width().to_pt(), pg.frame.height().to_pt()))
+            .unwrap_or((0.0, 0.0));
+        Ok(PreviewInfo {
+            key,
+            page_count: doc.pages().len() as u32,
+            width_pt: w,
+            height_pt: h,
+            warnings: self.font_warnings(&p),
+        })
+    }
+
+    pub fn page_view_pages(&self, key: &str, start: u32, count: u32) -> Result<Vec<PreviewPage>> {
+        let g = self
+            .page_cache
+            .lock()
+            .map_err(|_| MarginError::Internal("page view cache lock poisoned".into()))?;
+        match g.as_ref() {
+            Some(c) if c.key == key => Ok(svg_pages(&c.doc, start, count)),
+            _ => Err(MarginError::NotFound(
+                "this page view is out of date".into(),
+            )),
+        }
+    }
+
+    /// The text block under a click on a page (`x`, `y` in points from the page's top left).
+    pub fn page_view_hit(&self, key: &str, page: u32, x: f64, y: f64) -> Result<Option<PageHit>> {
+        let g = self
+            .page_cache
+            .lock()
+            .map_err(|_| MarginError::Internal("page view cache lock poisoned".into()))?;
+        let c = match g.as_ref() {
+            Some(c) if c.key == key => c,
+            _ => {
+                return Err(MarginError::NotFound(
+                    "this page view is out of date".into(),
+                ));
+            }
+        };
+        Ok(pageview::offset_at(&c.doc, &c.world, page as usize, x, y)
+            .and_then(|o| pageview::block_at(&c.map, o)))
+    }
+
     pub fn preview_pages(&self, key: &str, start: u32, count: u32) -> Result<Vec<PreviewPage>> {
         let doc = {
             let g = self
@@ -143,18 +256,7 @@ impl ExportService {
                 _ => return Err(MarginError::NotFound("this preview is out of date".into())),
             }
         };
-        let opts = typst_svg::SvgOptions::default();
-        Ok(doc
-            .pages()
-            .iter()
-            .enumerate()
-            .skip(start as usize)
-            .take(count as usize)
-            .map(|(i, page)| PreviewPage {
-                index: i as u32,
-                svg: typst_svg::svg(page, &opts),
-            })
-            .collect())
+        Ok(svg_pages(&doc, start, count))
     }
 
     /// Export with a profile into `dir` (or the profile's own folder).
@@ -247,6 +349,20 @@ impl ExportService {
             warnings,
         })
     }
+}
+
+fn svg_pages(doc: &PagedDocument, start: u32, count: u32) -> Vec<PreviewPage> {
+    let opts = typst_svg::SvgOptions::default();
+    doc.pages()
+        .iter()
+        .enumerate()
+        .skip(start as usize)
+        .take(count as usize)
+        .map(|(i, page)| PreviewPage {
+            index: i as u32,
+            svg: typst_svg::svg(page, &opts),
+        })
+        .collect()
 }
 
 /// A finished export replaces the file of the same name, atomically.

@@ -87,6 +87,20 @@ pub struct TemplateSettings {
 pub struct TemplateInfo {
     pub id: String,
     pub name: String,
+    /// Built in (cannot be changed) or saved by the author in `templates/`.
+    pub builtin: bool,
+    pub settings: TemplateSettings,
+}
+
+pub const TEMPLATE_SCHEMA_VERSION: u32 = 1;
+
+/// One saved template: `templates/<id>.yaml`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TemplateFile {
+    pub schema_version: u32,
+    pub id: String,
+    pub name: String,
     pub settings: TemplateSettings,
 }
 
@@ -161,6 +175,9 @@ pub struct PreviewInfo {
     pub height_pt: f64,
     pub warnings: Vec<String>,
 }
+
+/// A text block of the manuscript, found by clicking a page.
+pub use super::pageview::PageHit;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Type)]
 #[serde(rename_all = "camelCase")]

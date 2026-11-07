@@ -5,7 +5,7 @@
  */
 import { open } from "@tauri-apps/plugin-dialog";
 
-import { commands, type ExportProfile } from "./bindings";
+import { commands, type ExportProfile, type TemplateSettings } from "./bindings";
 import { unwrap } from "./story";
 import { workbench } from "./workbench";
 
@@ -31,6 +31,14 @@ export const exporter = {
   saveProfile: (profile: ExportProfile) => unwrap(commands.exportProfileSave(profile)),
   deleteProfile: (id: string) => unwrap(commands.exportProfileDelete(id)),
   templates: () => unwrap(commands.exportTemplates()),
+  /** Save a template in the project (`id` of a saved one replaces it). Returns every template. */
+  saveTemplate: (id: string | null, name: string, settings: TemplateSettings) => unwrap(commands.exportTemplateSave(id, name, settings)),
+  deleteTemplate: (id: string) => unwrap(commands.exportTemplateDelete(id)),
+  /** Typeset the chapter holding a document for the Page view (read-only). */
+  pageView: (docId: string, profile: ExportProfile) => unwrap(commands.pageView(docId, profile)),
+  pageViewPages: (key: string, start: number, count: number) => unwrap(commands.pageViewPages(key, start, count)),
+  /** The text block under a click (points from the page's top left), if any. */
+  pageViewHit: (key: string, page: number, x: number, y: number) => unwrap(commands.pageViewHit(key, page, x, y)),
   fonts: () => unwrap(commands.exportFonts()),
   /** Export into `dir`; `null` uses the profile's own folder. */
   run: (profile: ExportProfile, dir: string | null) => unwrap(commands.exportRun(profile, dir)),
@@ -38,6 +46,9 @@ export const exporter = {
   preview: (profile: ExportProfile) => unwrap(commands.exportPreview(profile)),
   previewPages: (key: string, start: number, count: number) => unwrap(commands.exportPreviewPages(key, start, count)),
 };
+
+/** The workspace view that shows the book's pages beside the writing. */
+export const PAGE_VIEW = "pageview.home";
 
 export function openExport(): void {
   workbench.openView(EXPORT_VIEW);
