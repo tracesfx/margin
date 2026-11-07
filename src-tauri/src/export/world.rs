@@ -21,8 +21,34 @@ fn fonts() -> &'static FontStore {
     FONTS.get_or_init(|| {
         let mut store = FontStore::new();
         store.extend(typst_kit::fonts::embedded());
+        store.extend(book_fonts());
         store.extend(typst_kit::fonts::system());
         store
+    })
+}
+
+/// The OFL book fonts that ship with Margin (licences sit beside them in
+/// `src-tauri/fonts/`). Compiled in, so no file is read at run time.
+fn book_fonts() -> impl Iterator<Item = (Font, typst::text::FontInfo)> {
+    const FILES: &[&[u8]] = &[
+        include_bytes!("../../fonts/eb-garamond/EBGaramond-Regular.ttf"),
+        include_bytes!("../../fonts/eb-garamond/EBGaramond-Italic.ttf"),
+        include_bytes!("../../fonts/eb-garamond/EBGaramond-Bold.ttf"),
+        include_bytes!("../../fonts/eb-garamond/EBGaramond-BoldItalic.ttf"),
+        include_bytes!("../../fonts/crimson-text/CrimsonText-Regular.ttf"),
+        include_bytes!("../../fonts/crimson-text/CrimsonText-Italic.ttf"),
+        include_bytes!("../../fonts/crimson-text/CrimsonText-Bold.ttf"),
+        include_bytes!("../../fonts/crimson-text/CrimsonText-BoldItalic.ttf"),
+        include_bytes!("../../fonts/source-serif-4/SourceSerif4-Regular.otf"),
+        include_bytes!("../../fonts/source-serif-4/SourceSerif4-It.otf"),
+        include_bytes!("../../fonts/source-serif-4/SourceSerif4-Bold.otf"),
+        include_bytes!("../../fonts/source-serif-4/SourceSerif4-BoldIt.otf"),
+    ];
+    FILES.iter().flat_map(|data| {
+        Font::iter(Bytes::new(*data)).map(|font| {
+            let info = font.info().clone();
+            (font, info)
+        })
     })
 }
 

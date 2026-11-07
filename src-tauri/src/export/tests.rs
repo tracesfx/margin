@@ -801,3 +801,51 @@ fn the_page_view_never_changes_the_manuscript() {
     assert_eq!(fs::read(f.root.join("project.yaml")).unwrap(), before);
     assert!(f.svc.page_view("missing", &profile_of("print")).is_err());
 }
+
+#[test]
+fn the_book_fonts_ship_with_margin_and_every_built_in_template_uses_one() {
+    let families = super::world::font_families();
+    for name in ["EB Garamond", "Crimson Text", "Source Serif 4"] {
+        assert!(families.iter().any(|f| f == name), "{name} is not bundled");
+        assert!(typeset::bundled(name));
+    }
+    // No template needs an installed font, so no export warns about one.
+    let f = fixture();
+    for t in profile::builtin_templates() {
+        assert!(
+            typeset::bundled(&t.settings.font),
+            "{} uses {}",
+            t.name,
+            t.settings.font
+        );
+        let mut p = profile_of("print");
+        p.settings = t.settings.clone();
+        assert!(f.svc.preview(&p).unwrap().warnings.is_empty(), "{}", t.name);
+    }
+    // Small capitals are real where the font has them.
+    assert!(typeset::has_small_caps("EB Garamond") && typeset::has_small_caps("Source Serif 4"));
+    assert!(!typeset::has_small_caps("Crimson Text"));
+}
+
+#[test]
+fn a_pdf_embeds_the_font_the_template_asked_for() {
+    let f = fixture();
+    for (template, needle) in [
+        ("classic", "EBGaramond"),
+        ("modern", "SourceSerif4"),
+        ("literary", "CrimsonText"),
+    ] {
+        let mut p = profile_of("print");
+        p.settings = profile::template(template).unwrap().settings;
+        let r = f
+            .svc
+            .run(&p, Some(&f.out.path().to_string_lossy()))
+            .unwrap();
+        let bytes = fs::read(&r.files[0]).unwrap();
+        let hay = String::from_utf8_lossy(&bytes);
+        assert!(
+            hay.contains(needle),
+            "{template} PDF does not embed {needle}"
+        );
+    }
+}

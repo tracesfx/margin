@@ -52,12 +52,24 @@ fn font_list(name: &str) -> String {
     format!("({})", fonts.join(", "))
 }
 
-/// The font family the template asks for, if it is not bundled.
+/// Fonts that ship inside Margin (Typst's own and the OFL book fonts in
+/// `src-tauri/fonts/`), so a book looks the same on any computer.
 pub fn bundled(font: &str) -> bool {
     matches!(
         font,
-        "Libertinus Serif" | "New Computer Modern" | "DejaVu Sans Mono"
+        "Libertinus Serif"
+            | "New Computer Modern"
+            | "DejaVu Sans Mono"
+            | "EB Garamond"
+            | "Crimson Text"
+            | "Source Serif 4"
     )
+}
+
+/// Bundled fonts that have real small-capital glyphs. Crimson Text does
+/// not, so it gets scaled capitals like any other font.
+pub fn has_small_caps(font: &str) -> bool {
+    bundled(font) && font != "Crimson Text" && font != "DejaVu Sans Mono"
 }
 
 struct Cx<'a> {
@@ -512,7 +524,7 @@ pub fn markup_with(book: &Book, p: &ExportProfile, marks: bool) -> String {
     let t = &p.settings;
     let cx = Cx {
         t,
-        real_sc: bundled(&t.font),
+        real_sc: has_small_caps(&t.font),
         marks: marks.then(|| RefCell::new((String::new(), 0))),
     };
     let has_parts = book.body.iter().any(|x| matches!(x, Piece::Part { .. }));

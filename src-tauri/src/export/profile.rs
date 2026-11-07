@@ -41,7 +41,7 @@ pub fn builtin_templates() -> Vec<TemplateInfo> {
             "classic",
             "Classic",
             TemplateSettings {
-                font: "Garamond".into(),
+                font: "EB Garamond".into(),
                 chapter_opening: ChapterOpening::SmallCapsLead,
                 ..base()
             },
@@ -50,7 +50,7 @@ pub fn builtin_templates() -> Vec<TemplateInfo> {
             "modern",
             "Modern",
             TemplateSettings {
-                font: "Georgia".into(),
+                font: "Source Serif 4".into(),
                 size_pt: 10.5,
                 indent_em: 0.0,
                 paragraph_space_em: 0.8,
@@ -66,7 +66,7 @@ pub fn builtin_templates() -> Vec<TemplateInfo> {
             "literary",
             "Literary",
             TemplateSettings {
-                font: "Palatino Linotype".into(),
+                font: "Crimson Text".into(),
                 indent_em: 1.2,
                 chapter_opening: ChapterOpening::LargeInitial,
                 ornament: "·  ·  ·".into(),
@@ -79,7 +79,7 @@ pub fn builtin_templates() -> Vec<TemplateInfo> {
             "nonfiction",
             "Non-fiction",
             TemplateSettings {
-                font: "Cambria".into(),
+                font: "Libertinus Serif".into(),
                 indent_em: 0.0,
                 paragraph_space_em: 0.7,
                 recto_starts: false,

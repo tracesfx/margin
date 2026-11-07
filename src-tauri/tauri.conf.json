@@ -38,6 +38,20 @@
   "bundle": {
     "active": true,
     "targets": ["nsis", "msi"],
-    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"]
+    "publisher": "Margin",
+    "copyright": "Copyright (c) Margin contributors",
+    "category": "Productivity",
+    "shortDescription": "A local, author-first writing studio",
+    "longDescription": "Margin is a desktop app for writing books, with a quiet assistant that runs entirely on your own computer. No network, no telemetry.",
+    "resources": {
+      "fonts/eb-garamond/OFL.txt": "licenses/fonts/eb-garamond-OFL.txt",
+      "fonts/crimson-text/OFL.txt": "licenses/fonts/crimson-text-OFL.txt",
+      "fonts/source-serif-4/OFL.md": "licenses/fonts/source-serif-4-OFL.md"
+    },
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.ico"],
+    "windows": {
+      "nsis": { "installMode": "currentUser", "languages": ["English"], "displayLanguageSelector": false },
+      "wix": { "language": "en-US" }
+    }
   }
 }

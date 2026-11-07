@@ -3,7 +3,7 @@
 Margin is a Windows desktop app for writing books, with a quiet local AI assistant. **`SPEC.md` is the source of truth.** Read the sections relevant to your task before writing code. If the implementation must deviate from the spec, update `SPEC.md` (decisions log §1.2, or the relevant section) in the same change, and tell the user.
 
 ## Status
-- Phase: **M7 mostly built** (2026-11-07): sprints, read aloud, first-run guide, accessibility pass, the in-editor Page view with click-to-source, saved templates; installer configured but unpackaged. Not built: bundled OFL fonts, the update check (SPEC §1.2 "M7 scope"). See `docs/progress.md`.
+- Phase: **M7 built** (2026-11-07): sprints, read aloud, first-run guide, accessibility pass, the in-editor Page view with click-to-source, saved templates, bundled OFL fonts, NSIS and MSI installers, a §14 performance pass. Not built: the update check (needs network; SPEC §1.2 "M7 scope"). See `docs/progress.md`.
 - Track milestone progress in `docs/progress.md`, a checklist per milestone. Create it on first run.
 - After scaffolding, replace the "Commands" section below with the real, verified commands.
 
@@ -59,6 +59,7 @@ Verified 2026-11-04. Rust is at `%USERPROFILE%\.cargo\bin`; Git Bash may need `e
 - Drive the running app (screenshots, clicks): launch with `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222`, then `playwright-core`'s `chromium.connectOverCDP("http://127.0.0.1:9222")`
 - Real-model tests are opt-in: `MARGIN_LIVE_MODEL=1` (optional `MARGIN_LIVE_URL`, default `http://127.0.0.1:8080`) with a server already running, e.g. `MARGIN_LIVE_MODEL=1 cargo test --manifest-path src-tauri/Cargo.toml --lib live_ -- --nocapture`. The M4 acceptance run (`live_ask_my_book_on_a_50k_word_manuscript`) reads `fixtures/manuscript50k/` and takes about 20 minutes
 - Editing Rust while `npm run tauri dev` runs restarts the app and stops its managed model server. Closing the window stops it too (`RunEvent::Exit`).
+- Installers: `npm run tauri build` (about 6 minutes) writes the NSIS and MSI to `src-tauri/target/release/bundle/`. If packaging fails with `FileAssociation.nsh` missing, delete `%LOCALAPPDATA%\tauri\NSIS` and rebuild. They are unsigned.
 - Windows note: `src-tauri/build.rs` embeds `windows-app-manifest.xml` into every linked target, because test binaries otherwise fail with `STATUS_ENTRYPOINT_NOT_FOUND`
 
 ## Conventions
