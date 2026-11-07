@@ -46,6 +46,12 @@ export interface AppSettings {
   /** Command id → chord, or `null` to unbind. Absent = default binding. */
   keymap: Record<string, string | null>;
   disabledModules: string[];
+  /** Check once a day whether a newer Margin has been published (off by default; SPEC §1.2). */
+  updateCheck: boolean;
+  /** When the last check ran (RFC 3339), or "". */
+  updateCheckedAt: string;
+  /** The newest version already announced, so a notice appears once per version. */
+  updateNotified: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -72,6 +78,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   highlightAi: false,
   keymap: {},
   disabledModules: [],
+  updateCheck: false,
+  updateCheckedAt: "",
+  updateNotified: "",
 };
 
 interface SettingsState {

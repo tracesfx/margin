@@ -3,14 +3,14 @@
 Margin is a Windows desktop app for writing books, with a quiet local AI assistant. **`SPEC.md` is the source of truth.** Read the sections relevant to your task before writing code. If the implementation must deviate from the spec, update `SPEC.md` (decisions log §1.2, or the relevant section) in the same change, and tell the user.
 
 ## Status
-- Phase: **M7 built** (2026-11-07): sprints, read aloud, first-run guide, accessibility pass, the in-editor Page view with click-to-source, saved templates, bundled OFL fonts, NSIS and MSI installers, a §14 performance pass. Not built: the update check (needs network; SPEC §1.2 "M7 scope"). See `docs/progress.md`.
+- Phase: **M7 built** (2026-11-07): sprints, read aloud, first-run guide, accessibility pass, the in-editor Page view with click-to-source, saved templates, bundled OFL fonts, NSIS and MSI installers, a §14 performance pass, an opt-in update check. The optional update check is built (off by default; SPEC §1.2 "Update check (M7)"). See `docs/progress.md`.
 - Track milestone progress in `docs/progress.md`, a checklist per milestone. Create it on first run.
 - After scaffolding, replace the "Commands" section below with the real, verified commands.
 
 ## Non-negotiables (from SPEC §2) — never violate
 1. The AI **never** modifies manuscript text except through an explicit user accept action. Ghost text is a ProseMirror **decoration only**. It is never a document node, never in undo history, never saved.
 2. **Never block typing.** No AI, IO, or indexing work on the UI thread. Every keystroke cancels in-flight ghost text.
-3. **No network** except configured `127.0.0.1` model endpoints. No telemetry, no analytics, no CDN-loaded assets. Bundle fonts and libraries.
+3. **No network** except configured `127.0.0.1` model endpoints, and the author-approved **opt-in update check** (`src-tauri/src/update.rs`, off by default, one fixed GitHub address, sends no data; SPEC §1.2). No telemetry, no analytics, no CDN-loaded assets. Bundle fonts and libraries. Do not add any other outbound request.
 4. **Canon is sacred.** AI writes may only create or update `inferred` memory records. Canon changes only via author actions. Enforce this in the Rust Story Data Service, not just the UI.
 5. **No modal dialogs or confirmation pop-ups** for routine actions. Make actions undoable or recoverable instead (Trash, history snapshots).
 6. **Atomic writes** for every project file (temp → fsync → rename). Never leave a half-written file.

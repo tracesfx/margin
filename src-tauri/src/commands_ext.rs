@@ -368,3 +368,20 @@ pub async fn provenance_totals(
 ) -> Result<crate::stats::provenance::ProvenanceTotals> {
     blocking(story.inner(), crate::stats::provenance::totals).await
 }
+
+// --- Update check (opt-in; the only non-local request Margin makes) ---------------
+
+/// Ask GitHub for the latest release of this project. Called only when the
+/// author presses "Check now" or has turned the daily check on.
+#[tauri::command]
+#[specta::specta]
+pub async fn update_check() -> Result<crate::update::UpdateStatus> {
+    crate::update::check_now().await
+}
+
+/// Open one of this project's release pages in the browser.
+#[tauri::command]
+#[specta::specta]
+pub async fn update_open_release(url: String) -> Result<()> {
+    crate::update::open_release_page(&url)
+}

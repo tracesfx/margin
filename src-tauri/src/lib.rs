@@ -18,6 +18,7 @@ pub mod project;
 pub mod spell;
 pub mod stats;
 pub mod story;
+pub mod update;
 pub mod watcher;
 
 use std::sync::Arc;
@@ -68,6 +69,8 @@ pub fn specta_builder() -> Builder<tauri::Wry> {
             c::app_save_ui,
             c::app_forget_recent,
             x::app_save_settings,
+            x::update_check,
+            x::update_open_release,
             x::app_before_close,
             x::document_peek,
             x::document_replace,

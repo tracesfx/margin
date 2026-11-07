@@ -30,6 +30,13 @@ export const commands = {
 	appForgetRecent: (root: string) => typedError<null, MarginError>(__TAURI_INVOKE("app_forget_recent", { root })),
 	appSaveSettings: (settings: string) => typedError<null, MarginError>(__TAURI_INVOKE("app_save_settings", { settings })),
 	/**
+	 *  Ask GitHub for the latest release of this project. Called only when the
+	 *  author presses "Check now" or has turned the daily check on.
+	 */
+	updateCheck: () => typedError<UpdateStatus, MarginError>(__TAURI_INVOKE("update_check")),
+	/**  Open one of this project's release pages in the browser. */
+	updateOpenRelease: (url: string) => typedError<null, MarginError>(__TAURI_INVOKE("update_open_release", { url })),
+	/**
 	 *  Called before the window closes: the writing session is recorded and a
 	 *  final backup is written if anything changed.
 	 */
@@ -1541,6 +1548,18 @@ export type Typography = {
 	quotes: boolean,
 	dashes: boolean,
 	ellipsis: boolean,
+};
+
+export type UpdateStatus = {
+	/**  The running version. */
+	current: string,
+	/**  The latest published release, if there is one. */
+	latest: string | null,
+	/**  Its page on GitHub (always inside this project's pages). */
+	url: string | null,
+	newer: boolean,
+	/**  When the check ran (RFC 3339, UTC). */
+	checkedAt: string,
 };
 
 export type Vram = {
