@@ -13,6 +13,7 @@ import {
 
 import { ErrorBoundary } from "./ErrorBoundary";
 import { Overlays } from "./Overlays";
+import { Onboarding } from "./Onboarding";
 import type { Registry } from "./registry";
 import { setSidebarWidth } from "./session";
 import { useShellUi } from "./shellUi";
@@ -61,6 +62,7 @@ export function Workspace({ registry, initialSidebarWidth, initialRightWidth }: 
   return (
     <div className={cls}>
       <RecoveryBanner />
+      <Onboarding />
       <div className="workspace-main">
         {sidebars.left.visible && left.length > 0 && (
           <>
@@ -68,11 +70,11 @@ export function Workspace({ registry, initialSidebarWidth, initialRightWidth }: 
             <Splitter side="left" initial={leftWidth} onResize={setLeftWidth} onDone={(w) => setSidebarWidth(w, "left")} />
           </>
         )}
-        <div className="panes">
+        <main className="panes" aria-label="Writing area">
           {panes.map((p) => (
             <PaneView key={p.id} pane={p} registry={registry} />
           ))}
-        </div>
+        </main>
         {sidebars.right.visible && right.length > 0 && (
           <>
             <Splitter side="right" initial={rightWidth} onResize={setRightWidth} onDone={(w) => setSidebarWidth(w, "right")} />
@@ -187,6 +189,13 @@ function PaneView({ pane, registry }: { pane: Pane; registry: Registry }) {
             <div
               key={t.id}
               role="tab"
+              tabIndex={t.id === pane.activeTabId ? 0 : -1}
+              onKeyDown={(e) => {
+                if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+                  e.preventDefault();
+                  activateTab(t.id);
+                }
+              }}
               aria-selected={t.id === pane.activeTabId}
               className={`tab${t.id === pane.activeTabId ? " active" : ""}`}
               onClick={() => activateTab(t.id)}

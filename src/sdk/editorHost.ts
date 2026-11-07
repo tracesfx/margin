@@ -21,6 +21,8 @@ export interface EditorHandleApi {
   readonly tabId: string;
   /** Plain text of the selection (empty if none). */
   selectedText(): string;
+  /** The whole document as plain text. */
+  documentText(): string;
   /** The document's plain text up to the cursor (paragraphs separated by a blank line). */
   textBeforeCursor(): string;
   /** The selection with some text on either side (for Phrasing). */

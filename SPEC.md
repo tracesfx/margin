@@ -72,6 +72,7 @@ Everything runs on the author's machine. Nothing leaves `localhost`.
 | Chapter openings (M6) | "Drop cap" is built as a **large first letter** (a raised initial), because Typst without a package cannot flow text around a sunken capital. Small-caps lead-in is built as specified |
 | DOCX (M6) | Built with `docx-rs`. Both modes use named paragraph styles (Body Text, First Paragraph, Chapter Title, Scene Break, Block Quote, Epigraph, Letter, Text Message, Verse, Centered, Heading 2-4, …). Small capitals are drawn as capitals one size smaller because `docx-rs` has no small-caps property; footnotes are real Word footnotes; the contents list is a Word field that updates when the file opens. Lists use a typed marker with a hanging indent, not Word numbering. Standard Manuscript Format: contact block, rounded word count, header "Surname / TITLE / page" from page 2, title block, chapters on new pages a third down, centred `#` breaks, "THE END". Comments as DOCX comments (optional in §11) are not built |
 | Page view (M6) | The export **preview** shows the Typst pages (SVG, one page or a spread, fetched a few at a time) beside the settings. The in-editor Page view and click-to-source (§12.2) are not built; they need a source map from pages back to paragraphs and move to M7 |
+| M7 scope | Built: **writing sprints** (status-bar timer, `Ctrl+Alt+T`, words counted from the stats session count, a quiet summary notice), **read aloud** (`Ctrl+Alt+R`; Windows voices through speech synthesis, **local voices only**: Edge's "Online" voices send text to a server and are never used), a **first-run guide** (dismissible card, never shown again, "Show the welcome guide" in the palette), an **accessibility pass** (main landmark, keyboard-operable tabs, the sprint clock kept out of the live region, forced-colors styles), and **NSIS/MSI installer targets** (configured; the release binary builds, but packaging was not completed or tested on this machine). **Not built, and why:** the optional **update check** (any outbound request breaks non-negotiable 3; updates stay manual downloads), the in-editor **Page view with click-to-source**, **bundled OFL book fonts** and **saved custom templates** (each needs design decisions or large font downloads; they stay open for a later change) |
 
 ---
 
@@ -788,7 +789,7 @@ Build order puts quality of life and the framework first. Each milestone ends wi
 - Markdown/TXT, SMF and styled DOCX, PDF, export profiles
 - ✅ Acceptance results in `docs/progress.md`
 
-**M7 — Polish**
+**M7 — Polish** (partly built 2026-11-07; see §1.2 "M7 scope" for what remains)
 - The in-editor Page view with click-to-source, bundled OFL book fonts, saved custom templates (moved from M6)
 - Writing sprints, read-aloud, onboarding, accessibility pass
 - Performance pass against §14

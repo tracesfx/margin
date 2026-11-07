@@ -291,6 +291,7 @@ function EditorSurface({ tabId, initial, active, focused }: SurfaceProps) {
         const { from, to } = editor.state.selection;
         return editor.state.doc.textBetween(from, to, "\n\n", "");
       },
+      documentText: () => plainText(editor.state.doc),
       textBeforeCursor: () => {
         const full = plainText(editor.state.doc).slice(0, offsetAt(editor.state.doc, editor.state.selection.head));
         return full.length > 12000 ? full.slice(-12000) : full;

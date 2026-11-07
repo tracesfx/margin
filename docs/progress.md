@@ -372,3 +372,24 @@ A throwaway project: the first 8 chapters of the 50k fixture (11,605 words, 16 s
 - Not typeset-checked against a printer's spec; platform gutter tables and preflight are deferred (§12.2).
 - The PDF's fonts are embedded by Typst; for a system font the result warns about its embedding licence.
 - The Word contents list is a field: Word asks to update it on first open.
+
+## M7 — Polish (2026-11-07, partly built)
+
+### Decisions (recorded in SPEC §1.2, "M7 scope")
+- Sprints use the stats session word count (`sessionWords`) so they never read the document; they end with a notice, not a dialog.
+- Read aloud uses `speechSynthesis` and only voices with `localService === true`. Online voices would send text off the machine (non-negotiable 3). New SDK surface: `EditorHandleApi.documentText()`.
+- The first-run flag is in `localStorage` (per user, not per project); blocked storage means the guide is never shown.
+- The update check is **not built**: it needs an outbound request. Updates are manual installer downloads.
+
+### Build checklist
+- [x] Writing sprints (`src/modules/sprint`): `Ctrl+Alt+T` (25 min), 15 and 10 min and "End the sprint" in the palette, status-bar timer and words
+- [x] Read aloud (`src/modules/readaloud`): `Ctrl+Alt+R`, whole scene, stop; chunked by sentence, local voices only
+- [x] First-run guide (`src/app/Onboarding.tsx`): create, connect a model, five shortcuts; dismissible; "Show the welcome guide"
+- [x] Accessibility pass: `main` landmark, tabs focusable and operable with Enter/Space, sprint clock not announced every second, `forced-colors` styles. Reduced motion and the focus ring were already in place
+- [~] Installer: NSIS and MSI targets are configured and `npm run tauri build` compiles the release `margin.exe`, but **packaging failed on this machine** (`FileAssociation.nsh` missing from the cached `%LOCALAPPDATA%	auriNSIS`, an incomplete tool download). No installer was produced or tested. Retry after clearing that cache with network access
+- [ ] In-editor Page view with click-to-source, bundled OFL fonts, saved custom templates, update check: **not built** (see above)
+- [ ] §14 performance pass: not re-run in M7 (M5 timed the Insights views; typing latency was not re-measured)
+
+### Tests (M7)
+- Vitest: 169 pass (sprint arithmetic and summary, voice filtering and sentence chunking); typecheck and ESLint clean.
+- Not verified by driving the running app: the sprint timer, read aloud (needs an installed local voice) and the guide were not exercised over CDP.

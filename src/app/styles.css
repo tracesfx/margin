@@ -2497,3 +2497,62 @@ button.link.mem-source { font-style: italic; text-align: left; max-width: 100%; 
 }
 .export-page img { display: block; width: 100%; height: 100%; }
 .export-page-wait { width: 100%; height: 100%; }
+
+/* --- M7: onboarding, sprint, accessibility ---------------------------- */
+
+.onboarding {
+  margin: 8px 12px 0;
+  padding: 12px 16px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+}
+.onboarding h2 {
+  margin: 0 0 6px;
+  font-size: 1.05em;
+}
+.onboarding ol {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 6px;
+}
+.onboarding-keys {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.onboarding kbd {
+  display: inline-block;
+  min-width: 5.5em;
+  padding: 0 6px;
+  font: inherit;
+  font-size: 0.9em;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-sunk);
+}
+.onboarding-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.status-sprint {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Windows high-contrast mode: let the system colours through. */
+@media (forced-colors: active) {
+  .onboarding,
+  .tab.active {
+    border: 1px solid CanvasText;
+  }
+  :focus-visible {
+    outline: 2px solid Highlight;
+  }
+}

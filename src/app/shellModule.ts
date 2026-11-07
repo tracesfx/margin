@@ -6,6 +6,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import { defineModule, sdkVersion, useWorkbench } from "@margin/sdk";
 
+import { resetOnboarding } from "./Onboarding";
 import { SettingsView } from "./SettingsView";
 import { SETTINGS_VIEW, openSettings, shellUi, useShellUi } from "./shellUi";
 
@@ -46,6 +47,7 @@ export default defineModule({
         keybinding: "Ctrl+/",
         run: () => shellUi.open("cheatSheet"),
       },
+      { id: "shell.welcome", title: "Show the welcome guide", category: "Help", run: resetOnboarding },
       { id: "shell.settings", title: "Settings", category: "File", keybinding: "Ctrl+,", run: () => openSettings() },
       {
         id: "shell.shortcutsEditor",
